@@ -1,0 +1,6 @@
+pfitz_api_env/
+.env
+db.sqlite3
+pfitz_api.code-workspace
+*/__pycache__/*
+*/migrations/*
