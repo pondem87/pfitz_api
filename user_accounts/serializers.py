@@ -81,9 +81,11 @@ class PasswordResetSerializer(serializers.Serializer):
         if not get_user_model().objects.filter(phone_number=phone_number).exists():
             raise serializers.ValidationError("Incorect phone number and code combination")
         
-        if not VerificationCode.objects.filter(user__phone_number=phone_number, code=code).exists():
+        v_code = VerificationCode.objects.filter(user__phone_number=phone_number, code=code, purpose=VerificationCode.PURPOSE_PASSWORD_RESET).first()
+        if not v_code:
             raise serializers.ValidationError("Invalid phone number and code combination")
         
+        v_code.delete()
         return attrs
 
 class VerificationCodeSerializer(serializers.ModelSerializer):

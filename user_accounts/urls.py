@@ -8,5 +8,5 @@ urlpatterns = [
     path('verify/', views.VerifyAccountAPIView.as_view()),
     path('request-pwd-reset/', views.RequestPasswordResetAPIView.as_view()),
     path('apply-pwd-reset/', views.ApplyPasswordResetAPIVIew.as_view()),
-    path('', include('knox.urls')), #implements logout/ and logout-all/
+    path('', include('knox.urls')), #implements logout/ and logoutall/
 ]

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from payments.models import Payment, Product
 
 # Create your models here.
 class Profile(models.Model):
@@ -21,8 +22,8 @@ class APIRequest(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
 
-class TokenVoucher(models.Model):
-    number_of_tokens = models.IntegerField()
-    payment_confirmed = models.BooleanField(default=False)
+class TokenReload(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    product = models.OneToOneField(Product, on_delete=models.RESTRICT)
+    payment = models.OneToOneField(Payment, on_delete=models.RESTRICT)
     timestamp = models.DateTimeField(auto_now_add=True)
