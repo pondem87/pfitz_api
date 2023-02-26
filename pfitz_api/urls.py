@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('account/', include('user_accounts.urls')),
     path('zimgpt/', include('zimgpt.urls')),
+    path('whatsapp/', include('whatsapp.urls'))
 ]

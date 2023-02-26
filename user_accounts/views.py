@@ -5,7 +5,7 @@ from rest_framework.settings import api_settings
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsVerifiedUser
 from django.contrib.auth import get_user_model
-from .serializers import CreatePfitzUserSerializer, UpdatePfitzUserSerializer, PfitzLoginSerializer, VerificationCodeSerializer, PasswordResetSerializer
+from .serializers import CreatePfitzUserSerializer, UpdatePfitzUserSerializer, PfitzLoginSerializer, VerificationCodeSerializer, PasswordResetSerializer, PfitzUserSerializer
 from django.contrib.auth import get_user_model
 from knox import views as knox_views
 from django.contrib.auth import login
@@ -35,6 +35,16 @@ class UpdateUserAPIView(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
+class GetUserAPIView(generics.GenericAPIView):
+    authentication_classes = api_settings.DEFAULT_AUTHENTICATION_CLASSES
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PfitzUserSerializer
+
+    def post(self, request):
+        serializer = PfitzUserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
 class LoginAPIView(knox_views.LoginView):
     permission_classes = (AllowAny,)
     serializer_class = PfitzLoginSerializer
@@ -44,6 +54,7 @@ class LoginAPIView(knox_views.LoginView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.validated_data['user']
             login(request, user)
+            logger.info("User login: user: %s", user.phone_number)
             response = super().post(request, format=None)
             return Response(response.data, status=status.HTTP_200_OK)
 
@@ -63,14 +74,14 @@ class VerifyAccountAPIView(generics.GenericAPIView):
             if v_code.code == input_code:
                 request.user.verified = True
                 request.user.save()
-                logger.info("New account activation.", {"user": request.user})
+                logger.info("New account activation for user: %s", request.user.phone_number)
                 v_code.delete()
-                user_serializer = PfitzLoginSerializer(instance=request.user)
-                return Response({"user": user_serializer.data}, status=status.HTTP_202_ACCEPTED)
+                user_serializer = PfitzUserSerializer(instance=request.user)
+                return Response(user_serializer.data, status=status.HTTP_202_ACCEPTED)
             else:
-                return Response({"non_field_errors": ["Incorrect verification code"]}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"non_field_errors": ["Incorrect verification phone number and code combination"]}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({"non_field_errors": ["No verification code found"]}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"non_field_errors": ["No verification information found"]}, status=status.HTTP_404_NOT_FOUND)
         
 
 class RequestPasswordResetAPIView(generics.GenericAPIView):

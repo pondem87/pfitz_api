@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     #custom
+    'whatsapp',
     'user_accounts',
     'zimgpt',
     'payments',
@@ -160,6 +161,9 @@ REST_KNOX = {
 }
 
 # setup logging
+loggly_token = config("LOGGLY_TOKEN")
+loggly_tag = "Pfitz_API_localdev"
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -171,23 +175,40 @@ LOGGING = {
         'simple': {
             'format': '{levelname} {module} {message}',
             'style': '{'
-        }
+        },
+        'json': {
+            'format': '{ "loggerName":"%(name)s", "asciTime":"%(asctime)s", "fileName":"%(filename)s", "logRecordCreationTime":"%(created)f", "functionName":"%(funcName)s", "levelNo":"%(levelno)s", "lineNo":"%(lineno)d", "time":"%(msecs)d", "levelName":"%(levelname)s", "message":"%(message)s"}',
+        },
     },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
-        }
+        },
+        'loggly': {
+            'class': 'loggly.handlers.HTTPSHandler',
+            'level': 'DEBUG',
+            'formatter': 'json',
+            'url': 'https://logs-01.loggly.com/inputs/' + loggly_token + '/tag/' + loggly_tag,
+        },
     },
     'loggers': {
-        'zimgpt': {
+        'django': {
             'handlers': ['console'],
-            'level': 'DEBUG'
+            'level': 'INFO',
+        },
+        'zimgpt': {
+            'handlers': ['console', 'loggly'],
+            'level': 'DEBUG',
         },
         'user_accounts': {
-            'handlers': ['console'],
-            'level': 'DEBUG'
+            'handlers': ['console', 'loggly'],
+            'level': 'DEBUG',
+        },
+        'whatsapp': {
+            'handlers': ['console', 'loggly'],
+            'level': 'DEBUG',
         }
     }
 }

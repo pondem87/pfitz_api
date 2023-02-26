@@ -1,24 +1,60 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from .models import VerificationCode
+import re
 
 from rest_framework import serializers
 
 ### auxilliary functions
+def validate_phone_number(phone_number):
+    if not re.match("^\d+$", phone_number):
+        raise serializers.ValidationError("Only numeric characters expected")
+    return phone_number
+
+def validate_password(password):
+    if len(password) < 8:
+        raise serializers.ValidationError("Password must be 8 characters or more")
+    if not re.match(".*[A-Z]+.*", password):
+        raise serializers.ValidationError("Password must contain at least 1 uppercase letter.")
+    if not re.match(".*[a-z]+.*", password):
+        raise serializers.ValidationError("Password must contain at least 1 lowercase letter.")
+    if not re.match(".*\d+.*", password):
+        raise serializers.ValidationError("Password must contain at least 1 numeric character.")
+    if re.match(".*\s+.*", password):
+        raise serializers.ValidationError("Password cannot contain blank spaces.")
+    if not re.match("^\w+$", password):
+        raise serializers.ValidationError("Password cannot contain special characters. Allows a-z, A-Z, 0-9 and _ only")
+    return password
+
+def validate_name(name):
+    if not re.match("^\w+$", name):
+        raise serializers.ValidationError("Name cannot contain special characters and spaces. Allows a-z, A-Z, 0-9 and _ only")
+    return name
 
 ### serializer classes
 class PfitzUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ('phone_number', 'name')
+        fields = ('phone_number', 'name', 'verified')
+        extra_kwargs = {
+            "phone_number": {"validators" : [validate_phone_number]}
+        }
 
 class CreatePfitzUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ('phone_number', 'name', 'password')
         extra_kwargs = {
-            "password" : {"write_only" : True }
+            "password" : {"write_only" : True, "validators" : [validate_password]},
+            "phone_number": {"validators" : [validate_phone_number]},
+            "name" : {"validators": [validate_name]}
         }
+    
+    def validate(self, attrs):
+        phone_number = attrs.get('phone_number')
+        if get_user_model().objects.filter(phone_number=phone_number).exists():
+            raise serializers.ValidationError("User with this number already registered.")
+        return super().validate(attrs)
 
     def create(self, validated_data):
         return get_user_model().objects.create_user(**validated_data)
@@ -32,7 +68,8 @@ class UpdatePfitzUserSerializer(serializers.ModelSerializer):
         fields = ('phone_number', 'name', 'password', 'old_password')
         extra_kwargs = {
             "phone_number" : {"read_only" : True },
-            "password" : {"write_only" : True }
+            "password" : {"write_only" : True, "validators" : [validate_password]},
+            "name" : {"validators": [validate_name]}
         }
     
     def update(self, instance, validated_data):
@@ -49,7 +86,7 @@ class UpdatePfitzUserSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class PfitzLoginSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
+    phone_number = serializers.CharField(validators=[validate_phone_number])
     password = serializers.CharField(style={'input_type': 'password'}, trim_whitespace=False)
     
     def validate(self, attrs):
@@ -69,8 +106,8 @@ class PfitzLoginSerializer(serializers.Serializer):
 
 
 class PasswordResetSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
-    password = serializers.CharField(style={'input': 'password'}, trim_whitespace=False)
+    phone_number = serializers.CharField(validators=[validate_phone_number])
+    password = serializers.CharField(style={'input': 'password'}, trim_whitespace=False, validators=[validate_password])
     code = serializers.CharField()
 
     def validate(self, attrs):
