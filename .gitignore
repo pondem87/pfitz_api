@@ -2,4 +2,3 @@ pfitz_api_env/
 .env
 db.sqlite3
 pfitz_api.code-workspace
-*/migrations/00*

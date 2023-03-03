@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
-from rest_framework.settings import api_settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7n_70j7=k=e6m$_2^lw--l-@32llnq+r+5@824x3y*ktp$x1cu'
+SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -87,8 +86,8 @@ WSGI_APPLICATION = 'pfitz_api.wsgi.application'
 
 
 # CORS settings
-# CORS_ALLOWED_ORIGINS = []
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = config('ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
+#CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Database
@@ -96,8 +95,12 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config("DB_NAME"),
+        'USER': config("DB_USER"),
+        'PASSWORD': config("DB_USER_PWD"),
+        'HOST': config("DB_HOST"),
+        'PORT': config("DB_PORT"),
     }
 }
 
@@ -138,6 +141,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = config("STATIC_ROOT_DIR")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
@@ -149,6 +154,8 @@ AUTH_USER_MODEL = "user_accounts.PfitzUser"
 # rest framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ('knox.auth.TokenAuthentication',),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 15,
 }
 
 # knox settings
@@ -163,7 +170,7 @@ REST_KNOX = {
 
 # setup logging
 loggly_token = config("LOGGLY_TOKEN")
-loggly_tag = "Pfitz_API_localdev"
+loggly_tag = config("LOGGLY_TAG")
 
 LOGGING = {
     'version': 1,
@@ -208,6 +215,10 @@ LOGGING = {
             'level': 'DEBUG',
         },
         'whatsapp': {
+            'handlers': ['console', 'loggly'],
+            'level': 'DEBUG',
+        },
+        'payments': {
             'handlers': ['console', 'loggly'],
             'level': 'DEBUG',
         }

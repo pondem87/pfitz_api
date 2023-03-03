@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile, UpstreamCompletionResponse
+from .models import Profile, UpstreamCompletionResponse, APIRequest
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -9,6 +9,22 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = '__all__'
 
+class AnswersAPIRequestSerializer(serializers.ModelSerializer):
+    generated_text = serializers.CharField(source="response_text")
+    prompt_history = serializers.CharField(source="prompt")
+    used_tokens = serializers.IntegerField(source="tokens_used")
+
+    class Meta:
+        model = APIRequest
+        fields = ['id','prompt_history', 'generated_text', 'used_tokens', 'prompt_tokens', 'timestamp']
+
+class AnswersListAPIRequestSerializer(serializers.ModelSerializer):
+    prompt_history = serializers.CharField(source="prompt")
+    used_tokens = serializers.IntegerField(source="tokens_used")
+
+    class Meta:
+        model = APIRequest
+        fields = ['id','prompt_history', 'used_tokens', 'prompt_tokens', 'timestamp']
 
 ## Serialization classes for the completions api response
 class ChoiceSerializer(serializers.Serializer):

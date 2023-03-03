@@ -60,6 +60,7 @@ class LoginAPIView(knox_views.LoginView):
 
 
 class VerifyAccountAPIView(generics.GenericAPIView):
+    authentication_classes = api_settings.DEFAULT_AUTHENTICATION_CLASSES
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
@@ -97,7 +98,7 @@ class RequestPasswordResetAPIView(generics.GenericAPIView):
         user = get_user_model().objects.filter(phone_number=phone_number).first()
 
         if not user:
-            return Response({"non_field_errors": ["No such user."]}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"non_field_errors": ["This number is not registered"]}, status=status.HTTP_404_NOT_FOUND)
         
         # check old code and delete if found
         v_code = VerificationCode.objects.filter(user=user, purpose=VerificationCode.PURPOSE_PASSWORD_RESET).first()
@@ -113,7 +114,7 @@ class RequestPasswordResetAPIView(generics.GenericAPIView):
 
         if code_serializer.is_valid(raise_exception=True):
             code_serializer.save()
-            return Response({"detail": "code was sent to your provided whatsapp number"}, status=status.HTTP_202_ACCEPTED)
+            return Response({"detail": "code was sent to your provided whatsapp number"}, status=status.HTTP_200_OK)
 
 
 class ApplyPasswordResetAPIVIew(generics.GenericAPIView):
@@ -125,5 +126,5 @@ class ApplyPasswordResetAPIVIew(generics.GenericAPIView):
             user = get_user_model().objects.filter(phone_number=password_serializer.validated_data.get('phone_number')).get()
             user.set_password(password_serializer.validated_data.get('password'))
             user.save()
-            return Response({"detail": "password reset successful"}, status=status.HTTP_202_ACCEPTED)
+            return Response({"detail": "password reset successful"}, status=status.HTTP_200_OK)
 

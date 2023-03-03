@@ -13,6 +13,13 @@ class Profile(models.Model):
         return self.user.phone_number
 
 class APIRequest(models.Model):
+    SERVICE_CHAT = "CHAT"
+    SERVICE_ANSWERS = "ANS"
+    service_choices = [
+        (SERVICE_CHAT, "CHAT"),
+        (SERVICE_ANSWERS, "ANSWERS"),
+    ]
+    service= models.CharField(max_length=50, choices=service_choices)
     prompt = models.TextField()
     prompt_tokens = models.IntegerField()
     tokens_used = models.IntegerField()
@@ -25,7 +32,7 @@ class APIRequest(models.Model):
 
 class TokenReload(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
-    product = models.OneToOneField(Product, on_delete=models.RESTRICT)
+    product = models.ForeignKey(Product, on_delete=models.RESTRICT)
     payment = models.OneToOneField(Payment, on_delete=models.RESTRICT)
     loaded = models.BooleanField(default=False)
     load_timestamp = models.DateTimeField(default=None, null=True)

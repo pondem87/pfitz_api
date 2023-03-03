@@ -240,6 +240,7 @@ class WebhookErrorSerializer(serializers.Serializer):
     
 
 class WebhookStatusPricingSerializer(serializers.Serializer):
+    billable = serializers.BooleanField()
     category = serializers.CharField()
     pricing_model = serializers.CharField()
 
@@ -255,7 +256,7 @@ class WebhookStatusConversationOriginSerializer(serializers.Serializer):
 class WebhookStatusConversationSerializer(serializers.Serializer):
     id = serializers.CharField()
     origin = WebhookStatusConversationOriginSerializer()
-    expiration_timestamp = serializers.CharField()
+    expiration_timestamp = serializers.CharField(required=False)
 
     def create(self, validated_data):
         origin_data = validated_data.pop("origin")

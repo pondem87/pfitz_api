@@ -298,7 +298,7 @@ class Webhook:
                         self.timestamp = timestamp
                     
                     class Conversation:
-                        def __init__(self, id, origin, expiration_timestamp):
+                        def __init__(self, id, origin, expiration_timestamp=None):
                             self.id = id
                             self.origin = origin
                             self.expiration_timestamp = expiration_timestamp
@@ -308,7 +308,8 @@ class Webhook:
                                 self.type = type
 
                     class Pricing:
-                        def __init__(self, category, pricing_model):
+                        def __init__(self, billable, category, pricing_model):
+                            self.billable = billable
                             self.category = category
                             self.pricing_model = pricing_model
 

@@ -45,4 +45,4 @@ def v_code_post_save_hanlder(sender, instance, created, *args, **kwargs):
         template = "unknown"
     
     logger.debug("Calling send_template : %s", template)
-    send_template(instance.user.phone_number, template, params, "en_GB")
+    send_template(instance.user.phone_number, template, params, "en_US")
