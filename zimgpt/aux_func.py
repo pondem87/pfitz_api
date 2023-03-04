@@ -111,7 +111,7 @@ def get_answer_completion(user, prompt_text, citations, words):
         top_p=1,
         frequency_penalty=0.0,
         presence_penalty=0.6,
-        stop=[" Human:", " AI:"]
+        stop=[]
         )
 
         logger.debug("Openai response object: %s", str(response))
@@ -127,7 +127,7 @@ def get_answer_completion(user, prompt_text, citations, words):
             # save api request
             APIRequest.objects.create(
                 service = APIRequest.SERVICE_ANSWERS,
-                prompt = prompt,
+                prompt = prompt_text,
                 prompt_tokens = obj.usage.prompt_tokens,
                 tokens_used = obj.usage.total_tokens,
                 tokens_remaining = tokens_remaining,
@@ -141,7 +141,7 @@ def get_answer_completion(user, prompt_text, citations, words):
                 obj.choices[0].text,
                 obj.usage.prompt_tokens,
                 obj.usage.total_tokens,
-                prompt + obj.choices[0].text)
+                prompt_text)
             return ClientCompletionResponse(answer, None)
         else:
             logger.error("Completions API response parsing failed: %s", str(response))
