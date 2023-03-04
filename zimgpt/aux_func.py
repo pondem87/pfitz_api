@@ -111,7 +111,7 @@ def get_answer_completion(user, prompt_text, citations, words):
         top_p=1,
         frequency_penalty=0.0,
         presence_penalty=0.6,
-        stop=[]
+        stop=["STOP"]
         )
 
         logger.debug("Openai response object: %s", str(response))
