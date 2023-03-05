@@ -115,7 +115,7 @@ class InitiatePaymentAPIView(generics.GenericAPIView):
 
             if response.success:
                 # Get the link to redirect the user to, then use it as you see fit
-                instructions = response.instructions
+                instructions = response.instruction
                 # Get the poll url (used to check the status of a transaction). You might want to save this in your DB
                 db_payment.poll_url = response.poll_url
                 db_payment.save()
@@ -131,7 +131,7 @@ class InitiatePaymentAPIView(generics.GenericAPIView):
                 db_payment.status = Payment.STATUS_REJECTED
                 db_payment.save()
 
-                return Response(response.error, status=status.HTTP_400_BAD_REQUEST)
+                return Response("Paynow failed", status=status.HTTP_400_BAD_REQUEST)
 
 
 class GetPaymentAPIView(generics.GenericAPIView):
