@@ -87,12 +87,14 @@ def get_chat_completion(user, prompt_text, prompt_history=None):
 
 def get_answer_completion(user, prompt_text, citations, words):
 
-    citations = " including citations to be listed at the bottom," if citations else ","
-    prompt = "Answer the following question like a scholar" + citations + " in about " + words + "words.\n\n" + prompt_text
+    citations = " including in-line numbered citations to be listed at the bottom," if citations else ","
+    prompt = "Answer the following question like a scholar" + citations + " in about " + str(words) + " words:\n\n" + prompt_text
 
     # check if tokens enough
     # get profile
     profile = user.profile
+
+    logger.debug("Called get_answer_completion. prompt= %s", prompt)
 
     approx_completion_tokens = int(int(words)/0.75)
 
@@ -106,8 +108,8 @@ def get_answer_completion(user, prompt_text, citations, words):
         response = oai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
-        temperature=0.5,
-        max_tokens=approx_completion_tokens,
+        temperature=0.4,
+        max_tokens=4000 - num_tokens_from_string(prompt),
         top_p=1,
         frequency_penalty=0.0,
         presence_penalty=0.6,
