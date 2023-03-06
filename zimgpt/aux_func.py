@@ -108,7 +108,7 @@ def get_answer_completion(user, prompt_text, citations, words):
         response = oai.Completion.create(
         model="text-davinci-003",
         prompt=prompt,
-        temperature=0.4,
+        temperature=0.7,
         max_tokens=4000 - num_tokens_from_string(prompt),
         top_p=1,
         frequency_penalty=0.0,

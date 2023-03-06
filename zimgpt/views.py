@@ -103,4 +103,4 @@ class AnswersListAPIView(generics.ListAPIView):
     serializer_class = AnswersListAPIRequestSerializer
 
     def get_queryset(self):
-        return APIRequest.objects.filter(profile=self.request.user.profile, service=APIRequest.SERVICE_ANSWERS)
+        return APIRequest.objects.filter(profile=self.request.user.profile, service=APIRequest.SERVICE_ANSWERS).order_by('-timestamp')
