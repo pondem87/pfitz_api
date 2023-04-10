@@ -140,8 +140,7 @@ def get_completion(user, prompt_text):
             obj = serializer.save()
 
             # subtract used tokens
-            tokens_remaining = subtract_used_tokens(
-                profile, obj.usage.total_tokens)
+            tokens_remaining = subtract_used_tokens(profile, obj.usage.total_tokens)
 
             # save api request
             APIRequest.objects.create(
