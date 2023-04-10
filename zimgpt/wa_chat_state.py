@@ -222,8 +222,8 @@ class WAChatState:
                             # selected view and buy tokens
                             user = get_user_model().objects.get(phone_number=self.user_num)
                             product_list = [WAChatState.Data.Product(index + 1, product.uuid, product.units_offered, product.price) for index, product in enumerate(Product.objects.filter(active=True).order_by('price'))]
-                            message = "Tokens remaining: *" + user.profile.tokens_remaining + "*\n\n If you want to refill your tokens, select 1 from our product offerings:\n" + \
-                                "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in product_list) + \
+                            message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\n If you want to refill your tokens, select 1 from our product offerings:\n" + \
+                                "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in product_list) + \
                                 "\n Or *0*: To go back to main menu"
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(product_list=product_list)
@@ -232,7 +232,7 @@ class WAChatState:
                             # selected check payment
                             payments = Payment.objects.filter(user__phone_number=self.user_num).order_by('-created')[:5]
                             message = "Here are the last 5 transactions. Select a transaction to check if there is a status update by sending the number.\n" + \
-                                "\n\n".join("*{i}*: {x}{m} via {a}:{n} at {time}. STATUS: {status}".format(i=index+1, x=p.amount, m=currency, a=p.method, n=p.mobile_wallet_number, time=p.created, status=p.status) for index, p in enumerate(payments)) + \
+                                "\n\n".join("*{i}*: {x}{m} via {a}:{n} at {time}. STATUS: {status}".format(i=str(index+1), x=str(p.amount), m=currency, a=p.method, n=p.mobile_wallet_number, time=p.created, status=p.status) for index, p in enumerate(payments)) + \
                                 "\n\n To view more transactions go to https://zimgpt.pfitz.co.zw/ or app 263775409679 for help." + \
                                 "\n\n Send *0* to go back to menu."
                             send_text(self.user_num, message, wamid)
