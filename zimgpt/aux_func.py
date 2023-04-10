@@ -5,6 +5,7 @@ import logging
 from .models import ClientCompletionResponse, APIRequest, Profile
 from .serializers import UpstreamChatCompletionResponseSerializer
 from .util import subtract_used_tokens, num_tokens_from_string, base_chat_prompt
+import uuid
 import json
 
 logger = logging.getLogger(__name__)
@@ -176,10 +177,23 @@ def get_completion(user, prompt_text):
 
 
 def process_ref_code(ref):
+
+    ref_uuid = is_valid_uuid(ref)
+
+    if not ref_uuid:
+        return
     
     try:
-        profile = Profile.objects.get(ref=ref)
+        profile = Profile.objects.get(ref=ref_uuid)
         profile.tokens_remaining += ref_reward_tokens
         profile.save()
     except Profile.DoesNotExist:
-        logger.info("Referral code failed: Code=%s", ref)
+        logger.info("Referral code failed: Code=%s", ref_uuid)
+
+
+def is_valid_uuid(uuid_str):
+    try:
+        uuid_obj = uuid.UUID(uuid_str)
+    except ValueError:
+        return False
+    return str(uuid_obj) == uuid_str

@@ -174,7 +174,7 @@ class WAChatState:
             #### case 2: Requesting for user's name after ground state
             case WAChatState._GET_NAME:
 
-                if input == '0':
+                if str(input) == '0':
                     if len(self.user_name.strip()) > 0:
                         # use whats app profile name
                         user = get_user_model().objects.get(phone_number=self.user_num)
@@ -204,21 +204,21 @@ class WAChatState:
 
             #### case 3: Checking menu selection
             case WAChatState._MENU:
-                if input in WAChatState._menu_vars:
-                    match input:
-                        case '1':
+                if str(input) in WAChatState._menu_vars:
+                    match int(input):
+                        case 1:
                             # selected chat
                             message = "You are in chat mode. Sending {code} will send you back to main menu.\n\n Hi. What's on your mind today?".format(code=WAChatState._reset_code)
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(conv_history=None)
                             self.state = WAChatState._CHAT
-                        case '2':
+                        case 2:
                             # selected free response
                             message = "Free prompt mode. Sending {code} will send you back to main menu.\n\n You can enter any text for text-completion by the AI model. ({model})".format(code=WAChatState._reset_code, model=model)
                             send_text(self.user_num, message, wamid)
                             self.data = None
                             self.state = WAChatState._CHAT
-                        case '3':
+                        case 3:
                             # selected view and buy tokens
                             user = get_user_model().objects.get(phone_number=self.user_num)
                             product_list = [WAChatState.Data.Product(index + 1, product.uuid, product.units_offered, product.price) for index, product in enumerate(Product.objects.filter(active=True).order_by('price'))]
@@ -228,7 +228,7 @@ class WAChatState:
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(product_list=product_list)
                             self.state = WAChatState._CHOOSE_PRODUCT
-                        case '4':
+                        case 4:
                             # selected check payment
                             payments = Payment.objects.filter(user__phone_number=self.user_num).order_by('-created')[:5]
                             message = "Here are the last 5 transactions. Select a transaction to check if there is a status update by sending the number.\n" + \
@@ -237,7 +237,7 @@ class WAChatState:
                                 "\n\n Send *0* to go back to menu."
                             send_text(self.user_num, message, wamid)
                             self.state = WAChatState._CHECK_PAYMENT
-                        case '5':
+                        case 5:
                             # selected get free tokens
                             user = get_user_model().objects.get(phone_number=self.user_num)
                             messages = [
@@ -283,22 +283,32 @@ class WAChatState:
                 product_indices = [p.index for p in self.data.product_list]
 
                 # check if any product was selected
-                if int(input) in product_indices:
-                    # pick a product and transition to confirmation state
-                    product = [p for p in self.data.product_list if p.index == int(input)][0]
-                    self.data.product_id = product.product_id
-                    message = "You selected {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(x=product.units, y=product.price, m=currency)
-                    send_text(self.user_num, message, wamid)
-                    self.state = WAChatState._CONFIRM_PRODUCT
-                
-                elif int(input) == 0:
-                    # return to main menu
-                    self.data = None
-                    self.state = WAChatState._MENU
-                    message = "Let start again." + WAChatState._menu_text
-                    send_text(self.user_num, message, wamid)
+                try:
 
-                else:
+                    if int(input) in product_indices:
+                        # pick a product and transition to confirmation state
+                        product = [p for p in self.data.product_list if p.index == int(input)][0]
+                        self.data.product_id = product.product_id
+                        message = "You selected {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(x=product.units, y=product.price, m=currency)
+                        send_text(self.user_num, message, wamid)
+                        self.state = WAChatState._CONFIRM_PRODUCT
+                    
+                    elif int(input) == 0:
+                        # return to main menu
+                        self.data = None
+                        self.state = WAChatState._MENU
+                        message = "Let start again." + WAChatState._menu_text
+                        send_text(self.user_num, message, wamid)
+
+                    else:
+                        # invalid input
+                        message = "Sorry, '{i}' is not a valid selection. Please choose from:\n" + \
+                            "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
+                            "\n Or *0*: To go back to main menu"
+                        send_text(self.user_num, message, wamid)
+                        # state remains the same
+
+                except:
                     # invalid input
                     message = "Sorry, '{i}' is not a valid selection. Please choose from:\n" + \
                         "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
@@ -309,14 +319,14 @@ class WAChatState:
             ### case 7: Receive confirmation or rejection of selected product
             case WAChatState._CONFIRM_PRODUCT:
 
-                if input == '1':
+                if str(input) == '1':
                     # confirmed product selection
                     # ask for payment method
                     message = "How would you like to pay for your product?\n\n Select:\n\n *1* Ecocash\n *2* Telecash\n *3* OneMoney \n *0* To Cancel Payment."
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._GET_PAYMENT_METHOD
 
-                elif input == '0':
+                elif str(input) == '0':
                     # cancelled selection
                     # offer selection again
                     message = "You can select the product of choice. Please choose from:\n" + \
@@ -336,12 +346,12 @@ class WAChatState:
             ### case 8: Select payment method or rejection of selected product    
             case WAChatState._GET_PAYMENT_METHOD:
                 
-                if input in ['1', '2', '3']:
-                    if input == '1':
+                if str(input) in ['1', '2', '3']:
+                    if str(input) == '1':
                         self.data.payment_method = "ecocash"
-                    elif input == '2':
+                    elif str(input) == '2':
                         self.data.payment_method = "telecash"
-                    elif input == '3':
+                    elif str(input) == '3':
                         self.data.payment_method = "onemoney"
 
                     # ask for mobile wallet number
@@ -349,7 +359,7 @@ class WAChatState:
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._GET_PAYMENT_NUMBER
 
-                elif input == '0':
+                elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
                         "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
@@ -381,7 +391,7 @@ class WAChatState:
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._CONFIRM_PAYMENT_DETAILS
                 
-                elif input == '0':
+                elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
                         "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
@@ -433,7 +443,7 @@ class WAChatState:
 
                 except ValidationError:
                     # not a vaild email
-                    if input == '0':
+                    if str(input) == '0':
                         # cancelled by user
                         message = "You can select the product of choice. Please choose from:\n" + \
                         "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
@@ -458,8 +468,8 @@ class WAChatState:
 
             ### case 11: Check payment status
             case WAChatState._CHECK_PAYMENT:
-                if input in ['0', '1', '2', '3', '4', '5']:
-                    if input == '0':
+                if str(input) in ['0', '1', '2', '3', '4', '5']:
+                    if str(input) == '0':
                         # return to main menu
                         self.data = None
                         self.state = WAChatState._MENU
