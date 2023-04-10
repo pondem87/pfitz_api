@@ -382,7 +382,7 @@ class WAChatState:
                     self.data.payment_number = input
 
                     # get product
-                    product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
+                    product = [p for p in self.data.product_list if p.product_id == self.data.product_id][0]
 
                     # ask for confirmation and email for paynow
                     message = "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
