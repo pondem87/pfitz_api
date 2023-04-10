@@ -308,7 +308,7 @@ class WAChatState:
                         send_text(self.user_num, message, wamid)
                         # state remains the same
 
-                except:
+                except ValueError:
                     # invalid input
                     message = "Sorry, '{i}' is not a valid selection. Please choose from:\n".format(i=input) + \
                         "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
