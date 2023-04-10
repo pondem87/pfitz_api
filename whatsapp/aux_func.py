@@ -1,11 +1,12 @@
 from decouple import config
 from whatsapp.models import Message, SentMessages
 from whatsapp.serializers import MessageSerializer, MessageSuccessResponseSerializer
+import requests
 import logging
 
 logger = logging.getLogger(__name__)
 
-import requests
+wa_temp_lang = config('WA_TEMPLATE_DEFAULT_LANG')
 
 debug = config('DEBUG', default=True, cast=bool)
 whatsapp_num_id = config('WHATSAPP_TEST_NUMBER_ID') if debug else config('WHATSAPP_NUMBER_ID')
@@ -14,7 +15,7 @@ whatsapp_access_token = config('WHATSAPP_ACCESS_TOKEN')
 messages_url = "https://graph.facebook.com/v16.0/{num_id}/messages".format(num_id=whatsapp_num_id)
 auth_header = "Bearer " + whatsapp_access_token
 
-def send_template(dest, template, params, lang="en_US"):
+def send_template(dest, template, params, lang=wa_temp_lang):
 
     logger.debug("Running send_template")
 
@@ -34,6 +35,52 @@ def send_template(dest, template, params, lang="en_US"):
 
     # create message object
     message = Message(to=dest, type="template", template=template)
+
+    # serialize
+    send_to_messages_api(message)
+
+
+def send_text(dest, message, reply_to_wamid=None, conv_id=None):
+
+    # create text obj
+    text = Message.Text(body=message)
+
+    # create context if replying to message
+    context = None
+    if reply_to_wamid is not None:
+        context = Message.Context(message_id=reply_to_wamid)
+
+    # generate messaging object
+    msg_obj = Message(to=dest, type="text", text=text, context=context)
+
+    # send to api
+    send_to_messages_api(msg_obj)
+
+    
+
+def send_read_report(wamid):
+    payload = {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": wamid
+    }
+
+    headers = {
+        "authorization": auth_header,
+    }
+
+    response = requests.post(messages_url, headers=headers, json=payload)
+
+    logger.debug("Read report response: %s", response.json())
+
+    if response.json()["success"]:
+        logger.info("Updated 'read' status for wamid: %s", wamid)
+    else:
+        logger.error("Failed status update for wamid: %s", wamid)
+
+
+# send prepared message to messages endpoint
+def send_to_messages_api(message):
 
     # serialize
     serialized = MessageSerializer(instance=message)
@@ -60,10 +107,11 @@ def send_template(dest, template, params, lang="en_US"):
                 user_number = message.to,
                 user_wa_id = message_respone.contacts[0].wa_id,
                 message_type = message.type,
-                template_name = message.template.name,
+                template_name = getattr(message.template, 'name', None),
+                message_text = getattr(message.text, 'body', None),
                 status = "sent"
             )
         except:
             logger.error("Failed to deserialize whatsapp messages api response: %s", str(serializer.errors))
     else:
-        logger.error("Whatsaap request failed: %s", response.text)
+        logger.error("Whatsapp request failed: %s", response.text)

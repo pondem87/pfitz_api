@@ -7,22 +7,25 @@ from .paynow import paynow
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from user_accounts.permissions import IsVerifiedUser
 from rest_framework.settings import api_settings
+from .pay_func import initiate_payment, check_payment_status
 import logging
 
 logger = logging.getLogger(__name__)
 
 # Create your views here.
 class UpdatePaymentAPIView(generics.GenericAPIView):
+    permission_classes = (AllowAny,)
     
     def post(self, request):
 
-        logger.debug("API initiated payment status update: %s", str(request.data))
+        logger.info("Upstream API initiated payment status update: %s", str(request.data))
 
         if request.data.get("pollurl", None):
 
             response = paynow.check_transaction_status(request.data.get("pollurl"))
 
             payment: Payment = get_object_or_404(Payment, uuid=response.reference)
+            
 
             if response.paid:
                 
@@ -67,7 +70,7 @@ class ZimGPTListProductsAPIView(generics.ListAPIView):
     authentication_classes = api_settings.DEFAULT_AUTHENTICATION_CLASSES
     permission_classes = (IsAuthenticated, IsVerifiedUser)
     serializer_class = ProductSerializer
-    queryset = Product.objects.filter(app_name=Product.APP_ZIMGPT, active=True)
+    queryset = Product.objects.filter(app_name=Product.APP_ZIMGPT, active=True).order_by('price')
     pagination_class = None
 
 class PaymentListAPIView(generics.ListAPIView):
@@ -95,43 +98,9 @@ class InitiatePaymentAPIView(generics.GenericAPIView):
                         phone_number, method, product.uuid)
             
             #start payment
-            #create payment in database
-            db_payment = Payment.objects.create(
-                user = request.user,
-                product = product,
-                method = method,
-                mobile_wallet_number = phone_number,
-                status = Payment.STATUS_INITIATED,
-                amount = product.price
-            )
+            response = initiate_payment(request.user, product, method, phone_number, email)
 
-            payment = paynow.create_payment(db_payment.uuid, email)
-
-            logger.debug("New trans for: %s", product.price)
-
-            payment.add(product.product_name, product.price)
-
-            response = paynow.send_mobile(payment, phone_number, method)
-
-            if response.success:
-                # Get the link to redirect the user to, then use it as you see fit
-                instructions = response.instructions
-                # Get the poll url (used to check the status of a transaction). You might want to save this in your DB
-                db_payment.poll_url = response.poll_url
-                db_payment.save()
-
-                logger.debug("Paynow response: %s", str(response))
-                
-                return Response(instructions, status=status.HTTP_200_OK)
-
-            else:
-                # failed request
-                logger.error("Paynow error: %s", str(response))
-
-                db_payment.status = Payment.STATUS_REJECTED
-                db_payment.save()
-
-                return Response(response.error, status=status.HTTP_400_BAD_REQUEST)
+            return Response(response[0], status=response[1])
 
 
 class GetPaymentAPIView(generics.GenericAPIView):
@@ -143,40 +112,7 @@ class GetPaymentAPIView(generics.GenericAPIView):
         
         payment: Payment = get_object_or_404(Payment.objects.filter(user=request.user), uuid=uuid)
 
-        if not (payment.status == Payment.STATUS_PAID or payment.status == Payment.STATUS_CANCELLED or payment.status == Payment.STATUS_REJECTED or payment.status == Payment.STATUS_REFUNDED):
-
-            response = paynow.check_transaction_status(payment.poll_url)
-
-            if response.paid:
-                
-                payment.status = Payment.STATUS_PAID
-
-            elif response.status.lower().strip() == "created":
-
-                payment.status = Payment.STATUS_INITIATED
-
-            elif response.status.lower().strip() == "sent":
-
-                payment.status = Payment.STATUS_PENDING
-
-            elif response.status.lower().strip() == "cancelled":
-
-                payment.status = Payment.STATUS_CANCELLED
-
-            elif response.status.lower().strip() == "refunded":
-
-                payment.status = Payment.STATUS_REFUNDED
-            
-            elif response.status.lower().strip() == "delivered" or response.status.lower().strip() == "awaiting delivery":
-                
-                payment.status = Payment.STATUS_APPROVED
-            
-            else:
-
-                payment.status = Payment.STATUS_PENDING
-
-            payment.external_ref = response.paynow_reference
-            payment.save()
+        check_payment_status(payment)
 
         # return object
         serializer = PaymentSerializer(payment)

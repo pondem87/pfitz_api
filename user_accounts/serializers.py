@@ -1,9 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from .models import VerificationCode
+from zimgpt.models import Profile
 import re
-
+from decouple import config
 from rest_framework import serializers
+
+bonus_tokens = config('INITIAL_ONBOARDING_TOKENS', default=0, cast=int)
 
 ### auxilliary functions
 def validate_phone_number(phone_number):
@@ -57,8 +60,10 @@ class CreatePfitzUserSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
     def create(self, validated_data):
-        return get_user_model().objects.create_user(**validated_data)
-
+        user = get_user_model().objects.create_user(**validated_data)
+        profile = Profile(user=user, tokens_remaining=bonus_tokens)
+        profile.save()
+        return user
 
 class UpdatePfitzUserSerializer(serializers.ModelSerializer):
     old_password = serializers.CharField(write_only=True)

@@ -268,7 +268,7 @@ class WebhookStatusSerializer(serializers.Serializer):
     id = serializers.CharField()
     conversation = WebhookStatusConversationSerializer(required=False)
     pricing = WebhookStatusPricingSerializer(required=False)
-    errors = WebhookErrorSerializer(required=False)
+    errors = WebhookErrorSerializer(many=True, required=False)
     recipient_id = serializers.CharField()
     status = serializers.CharField()
     timestamp = serializers.IntegerField()
@@ -787,7 +787,7 @@ class LanguageSerializer(serializers.Serializer):
     code = serializers.CharField()
 
 class TextSerializer(serializers.Serializer):
-    text = serializers.CharField()
+    body = serializers.CharField()
     preview_url = serializers.BooleanField()
 
 class ContextSerializer(serializers.Serializer):

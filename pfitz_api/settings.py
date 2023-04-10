@@ -34,6 +34,7 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.spl
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'corsheaders',
     'rest_framework',
     'knox',
@@ -83,6 +84,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'pfitz_api.wsgi.application'
+
+ASGI_APPLICATION = 'pfitz_api.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": config("CHANNEL_LAYERS_BACKEND"),
+        "CONFIG": {
+            "hosts": [(config("CHANNEL_LAYERS_HOST"), config("CHANNEL_LAYERS_PORT"))]
+        }
+    }
+}
 
 
 # CORS settings
@@ -171,6 +183,8 @@ REST_KNOX = {
 # setup logging
 loggly_token = config("LOGGLY_TOKEN")
 loggly_tag = config("LOGGLY_TAG")
+log_level = config("GENERAL_LOG_LEVEL")
+log_files_root = config("LOG_FILES_ROOT")
 
 LOGGING = {
     'version': 1,
@@ -190,15 +204,22 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': log_level,
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
         'loggly': {
             'class': 'loggly.handlers.HTTPSHandler',
-            'level': 'DEBUG',
+            'level': log_level,
             'formatter': 'json',
             'url': 'https://logs-01.loggly.com/inputs/' + loggly_token + '/tag/' + loggly_tag,
+        },
+        'file': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': log_files_root + 'pfitz.log',
+            'when': 'W0',  # Rotate every week on Monday at midnight
+            'backupCount': 8,  # Keep up to 8 weeks of logs
+            'formatter': 'verbose',
         },
     },
     'loggers': {
@@ -207,20 +228,24 @@ LOGGING = {
             'level': 'INFO',
         },
         'zimgpt': {
-            'handlers': ['console', 'loggly'],
-            'level': 'DEBUG',
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
         },
         'user_accounts': {
-            'handlers': ['console', 'loggly'],
-            'level': 'DEBUG',
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
         },
         'whatsapp': {
-            'handlers': ['console', 'loggly'],
-            'level': 'DEBUG',
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
         },
         'payments': {
-            'handlers': ['console', 'loggly'],
-            'level': 'DEBUG',
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
+        },
+        'pfitz_api': {
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
         }
     }
 }

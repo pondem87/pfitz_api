@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from .serializers import WebhookObjectSerializer
 from .models import SentMessages, ReceivedMessages
 from decouple import config
+from zimgpt.tasks import process_whatsapp_state_input
+from whatsapp.aux_func import send_read_report
 import logging
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,10 @@ class WebhookAPIView(generics.GenericAPIView):
                 message_text = message_text
             )
 
+            name = getattr(contacts[index].profile, 'name', "")
+
+            process_app_msg(message.wa_from, name, message.id, message_text)
+
             index += 1
 
     def on_status_update(self, request, account_id, metatdata, statuses):
@@ -80,3 +86,18 @@ class WebhookAPIView(generics.GenericAPIView):
         else:
             logger.error("Improper webhook subscription request.")
             return Response(None, status=status.HTTP_400_BAD_REQUEST)
+        
+
+# process app message as async task
+def process_app_msg(
+    user_num: str,
+    name: str,
+    wamid: str,
+    message: str
+):
+    logger.debug("Processing received message: user number: %s", user_num)
+
+        # send read report
+    send_read_report(wamid)
+
+    process_whatsapp_state_input.delay(user_num, name, wamid, message)

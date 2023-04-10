@@ -63,8 +63,8 @@ class Message():
                     self.text = text
     
     class Text:
-        def __init__(self, text, preview_url=False):
-            self.text = text
+        def __init__(self, body, preview_url=False):
+            self.body = body
             self.preview_url = preview_url
 
     class Context:

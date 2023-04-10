@@ -1,13 +1,16 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from payments.models import Payment, Product
+import uuid
 
 # Create your models here.
 class Profile(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
     tokens_remaining = models.IntegerField(default=0)
-    chat_max_tokens = models.IntegerField(default=150)
+    chat_max_tokens = models.IntegerField(default=4000)
+    wa_chat_state = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
+    ref = models.UUIDField(default=uuid.uuid4, editable=False)
 
     def __str__(self):
         return self.user.phone_number
@@ -85,4 +88,41 @@ class UpstreamCompletionResponse:
         self.model = model
         self.choices = choices
         self.usage = usage
+
+class UpstreamChatCompletionResponse:
+    class Choice:
+        def __init__(self, delta=None, message=None, index=None, finish_reason=None):
+            self.message = message
+            self.delta = delta
+            self.index = index
+            self.finish_reason = finish_reason
         
+        class Message:
+            def __init__(self, role=None, content=None):
+                self.role = role
+                self.content = content
+
+            def __str__(self) -> str:
+                return "Message(role='{role}', content='{content}')".format(role=self.role, content=self.content)
+        
+        class Delta:
+            def __init__(self, role=None, content=None):
+                self.role = role
+                self.content = content
+            
+            def __str__(self) -> str:
+                return "Delta(role='{role}', content='{content}')".format(role=self.role, content=self.content)
+
+    class Usage:
+        def __init__(self, prompt_tokens, completion_tokens, total_tokens):
+            self.prompt_tokens = prompt_tokens
+            self.completion_tokens = completion_tokens
+            self.total_tokens = total_tokens
+    
+    def __init__(self, id, object, created, model, choices, usage=None):
+        self.id = id
+        self.object = object
+        self.created = created
+        self.model = model
+        self.choices = choices
+        self.usage = usage
