@@ -1,3 +1,4 @@
+from .serializers import ProfileSerializer
 import tiktoken
 import re
 
@@ -9,8 +10,8 @@ base_chat_prompt = [
 
 def subtract_used_tokens(profile, used_tokens) -> int:
     profile.tokens_remaining = int(profile.tokens_remaining) - int(used_tokens)
-    profile.save()
-    return profile.tokens_remaining
+    serializer = ProfileSerializer(instance=profile)
+    return serializer.save().tokens_remaining
 
 def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:
     """Returns the number of tokens in a text string."""
