@@ -385,7 +385,7 @@ class WAChatState:
                     product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
 
                     # ask for confirmation and email for paynow
-                    message = "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=product.units, y=product.price, m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
+                    message = "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
                         "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
                         "\n\nIf incorrect send *0* to cancel payemnt."
                     send_text(self.user_num, message, wamid)
@@ -394,7 +394,7 @@ class WAChatState:
                 elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
                         "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # set state for product selection
