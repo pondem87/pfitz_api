@@ -217,7 +217,7 @@ class WAChatState:
                             message = "Free prompt mode. Sending {code} will send you back to main menu.\n\n You can enter any text for text-completion by the AI model. ({model})".format(code=WAChatState._reset_code, model=model)
                             send_text(self.user_num, message, wamid)
                             self.data = None
-                            self.state = WAChatState._CHAT
+                            self.state = WAChatState._FREE_PROMPT
                         case 3:
                             # selected view and buy tokens
                             user = get_user_model().objects.get(phone_number=self.user_num)
