@@ -12,7 +12,7 @@ base_chat_prompt = [
     ]
 
 def subtract_used_tokens(profile, used_tokens) -> int:
-    logger.debug("Subtracting used tokens from profile:%s. Profile tokens=%s; Used tokens=%s", str(profile), str(profile.tokens_remainig), str(used_tokens))
+    logger.debug("Subtracting used tokens from profile:%s. Profile tokens=%s; Used tokens=%s", str(profile), str(profile.tokens_remaining), str(used_tokens))
     tokens_remaining = int(profile.tokens_remaining) - int(used_tokens)
     profile.tokens_remaining = tokens_remaining
     profile.save()
