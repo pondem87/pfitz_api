@@ -41,7 +41,7 @@ class WAChatStateDataSerializer(serializers.Serializer):
         if product_list_data:
             product_list = []
             for product_data in product_list_data:
-                product = WAChatStateDataProductSerializer(**product_data)
+                product = WAChatStateDataProductSerializer(data=product_data)
                 product.is_valid(raise_exception=True)
                 product_list.append(product.save())
         else:
@@ -152,7 +152,7 @@ class WAChatState:
                         name_line = "Before we begin. What is your name?"
                     messages = [
                         "Welcome to ZimGPT, a service that allows you access to an AI with vast knowledge and the ability to understand and answer questions from any topic you can think of. Boost your creativity and productivity by interacting with the AI in plain english language.",
-                        "You can also access the service online for better readability and copy-paste functionality for your projects and assignments.\n\n The link is https://zimgpt.pfitz.co.zw/ and login with the password in the message below. Keep the password safe as it is not saved in our system.",
+                        "You can also access the service online for better readability and copy-paste functionality for your projects and assignments.\n\nThe link is https://zimgpt.pfitz.co.zw/ and login with the password in the message below. Keep the password safe as it is not saved in our system.",
                         "Password:{pwd}".format(pwd=self.new_password),
                         name_line
                     ]
@@ -208,13 +208,13 @@ class WAChatState:
                     match int(input):
                         case 1:
                             # selected chat
-                            message = "You are in chat mode. Sending {code} will send you back to main menu.\n\n Hi. What's on your mind today?".format(code=WAChatState._reset_code)
+                            message = "You are in chat mode. Sending {code} will send you back to main menu.\n\nHi. What's on your mind today?".format(code=WAChatState._reset_code)
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(conv_history=None)
                             self.state = WAChatState._CHAT
                         case 2:
                             # selected free response
-                            message = "Free prompt mode. Sending {code} will send you back to main menu.\n\n You can enter any text for text-completion by the AI model. ({model})".format(code=WAChatState._reset_code, model=model)
+                            message = "Free prompt mode. Sending {code} will send you back to main menu.\n\nYou can enter any text for text-completion by the AI model. ({model})".format(code=WAChatState._reset_code, model=model)
                             send_text(self.user_num, message, wamid)
                             self.data = None
                             self.state = WAChatState._FREE_PROMPT
@@ -222,9 +222,9 @@ class WAChatState:
                             # selected view and buy tokens
                             user = get_user_model().objects.get(phone_number=self.user_num)
                             product_list = [WAChatState.Data.Product(index + 1, product.uuid, product.units_offered, product.price) for index, product in enumerate(Product.objects.filter(active=True).order_by('price'))]
-                            message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\n If you want to refill your tokens, select 1 from our product offerings:\n" + \
-                                "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in product_list) + \
-                                "\n Or *0*: To go back to main menu"
+                            message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\nIf you want to refill your tokens, select 1 from our product offerings:\n" + \
+                                "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in product_list) + \
+                                "\nOr *0*: To go back to main menu"
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(product_list=product_list)
                             self.state = WAChatState._CHOOSE_PRODUCT
@@ -233,16 +233,16 @@ class WAChatState:
                             payments = Payment.objects.filter(user__phone_number=self.user_num).order_by('-created')[:5]
                             message = "Here are the last 5 transactions. Select a transaction to check if there is a status update by sending the number.\n" + \
                                 "\n\n".join("*{i}*: {x}{m} via {a}:{n} at {time}. STATUS: {status}".format(i=str(index+1), x=str(p.amount), m=currency, a=p.method, n=p.mobile_wallet_number, time=p.created, status=p.status) for index, p in enumerate(payments)) + \
-                                "\n\n To view more transactions go to https://zimgpt.pfitz.co.zw/ or app 263775409679 for help." + \
-                                "\n\n Send *0* to go back to menu."
+                                "\n\nTo view more transactions go to https://zimgpt.pfitz.co.zw/ or app 263775409679 for help." + \
+                                "\n\nSend *0* to go back to menu."
                             send_text(self.user_num, message, wamid)
                             self.state = WAChatState._CHECK_PAYMENT
                         case 5:
                             # selected get free tokens
                             user = get_user_model().objects.get(phone_number=self.user_num)
                             messages = [
-                                "*You can get 50,000 tokens which is about 37,500 words!*\n\n For every person you refer you get 50,000 tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp." + \
-                                "\n\n The link is in the message below. Share it and earn more tokens.",
+                                "*You can get 50,000 tokens which is about 37,500 words!*\n\nFor every person you refer you get 50,000 tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp." + \
+                                "\n\nThe link is in the message below. Share it and earn more tokens.",
                                 "https://wa.me/26777084294?text={code}".format(code=user.profile.ref)
                             ]
                             for message in messages:
@@ -263,7 +263,7 @@ class WAChatState:
                     self.data.conv_history = completion.response.prompt_history
                     send_text(self.user_num, completion.response.generated_text, wamid)
                 else:
-                    message = "Error: Ooops, something went wrong!\n\n _Error message: {msg}_".format(msg=completion.error.message)
+                    message = "Error: Ooops, something went wrong!\n\n_Error message: {msg}_".format(msg=completion.error.message)
                     send_text(self.user_num, message, wamid)
 
             #### case 5: Prompt engineer
@@ -274,7 +274,7 @@ class WAChatState:
                     # no error
                     send_text(self.user_num, completion.response.generated_text, wamid)
                 else:
-                    message = "Error: Ooops, something went wrong!\n\n _Error message: {msg}_".format(msg=completion.error.message)
+                    message = "Error: Ooops, something went wrong!\n\n_Error message: {msg}_".format(msg=completion.error.message)
                     send_text(self.user_num, message, wamid)
                 pass
 
@@ -303,16 +303,16 @@ class WAChatState:
                     else:
                         # invalid input
                         message = "Sorry, '{i}' is not a valid selection. Please choose from:\n" + \
-                            "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
-                            "\n Or *0*: To go back to main menu"
+                            "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                            "\nOr *0*: To go back to main menu"
                         send_text(self.user_num, message, wamid)
                         # state remains the same
 
                 except ValueError:
                     # invalid input
                     message = "Sorry, '{i}' is not a valid selection. Please choose from:\n".format(i=input) + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # state remains the same
 
@@ -322,7 +322,7 @@ class WAChatState:
                 if str(input) == '1':
                     # confirmed product selection
                     # ask for payment method
-                    message = "How would you like to pay for your product?\n\n Select:\n\n *1* Ecocash\n *2* Telecash\n *3* OneMoney \n *0* To Cancel Payment."
+                    message = "How would you like to pay for your product?\n\n Select:\n\n*1* Ecocash\n*2* Telecash\n*3* OneMoney \n*0* To Cancel Payment."
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._GET_PAYMENT_METHOD
 
@@ -330,8 +330,8 @@ class WAChatState:
                     # cancelled selection
                     # offer selection again
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
 
                     self.state = WAChatState._CHOOSE_PRODUCT
@@ -339,7 +339,7 @@ class WAChatState:
                 else:
                     # invalid input
                     product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
-                    message = "Sorry, '{i}' is not a valid response.\n\n You are about to buy {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(i=input, x=str(product.units), y=str(product.price), m=currency)
+                    message = "Sorry, '{i}' is not a valid response.\n\nYou are about to buy {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(i=input, x=str(product.units), y=str(product.price), m=currency)
                     send_text(self.user_num, message, wamid)
                     # state remains the same
 
@@ -362,15 +362,15 @@ class WAChatState:
                 elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # set state for product selection
                     self.state = WAChatState._CHOOSE_PRODUCT
                 
                 else:
                     # invalid input
-                    message = "Sorry, '{i}' is not a valid response.\n\nHow would you like to pay for your product?\n\n Select:\n\n *1* Ecocash\n *2* Telecash\n *3* OneMoney \n *0* To Cancel Payment.".format(i=input)
+                    message = "Sorry, '{i}' is not a valid response.\n\nHow would you like to pay for your product?\n\nSelect:\n\n*1* Ecocash\n*2* Telecash\n*3* OneMoney \n*0* To Cancel Payment.".format(i=input)
                     send_text(self.user_num, message, wamid)
                     #state is not changed
 
@@ -386,23 +386,23 @@ class WAChatState:
 
                     # ask for confirmation and email for paynow
                     message = "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=product.units, y=product.price, m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
-                        "\n\n If information is correct, enter and *send your email address* for payment confirmation." + \
-                        "\n\n If incorrect send *0* to cancel payemnt."
+                        "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
+                        "\n\nIf incorrect send *0* to cancel payemnt."
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._CONFIRM_PAYMENT_DETAILS
                 
                 elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # set state for product selection
                     self.state = WAChatState._CHOOSE_PRODUCT
                 
                 else:
                     # invalid input
-                    message = "Sorry, '{i}' is not a valid response or mobile number.\n\nExample mobile number format is 0777111222\n\n Or *0* To Cancel Payment.".format(i=input)
+                    message = "Sorry, '{i}' is not a valid response or mobile number.\n\nExample mobile number format is 0777111222\n\nOr *0* To Cancel Payment.".format(i=input)
                     send_text(self.user_num, message, wamid)
                     #state is not changed
 
@@ -437,8 +437,8 @@ class WAChatState:
 
                         message = "Sorry, An error occured. Error: {err}.\n\n".format(err=response[0]) + \
                             "You were attempting to purchase *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
-                            "\n\n If information is correct, enter and *send your email address* for payment confirmation." + \
-                            "\n\n If incorrect send *0* to cancel payemnt."
+                            "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
+                            "\n\nIf incorrect send *0* to cancel payemnt."
                         send_text(self.user_num, message, wamid)
 
                 except ValidationError:
@@ -446,8 +446,8 @@ class WAChatState:
                     if str(input) == '0':
                         # cancelled by user
                         message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                         send_text(self.user_num, message, wamid)
                         # set state for product selection
                         self.state = WAChatState._CHOOSE_PRODUCT
@@ -460,8 +460,8 @@ class WAChatState:
                         # ask for confirmation and email for paynow
                         message = "Sorry, '{i}' is neither a valid email nor '0' for cancellation.\n\n".format(i=input) + \
                             "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
-                            "\n\n If information is correct, enter and *send your email address* for payment confirmation." + \
-                            "\n\n If incorrect send *0* to cancel payemnt."
+                            "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
+                            "\n\nIf incorrect send *0* to cancel payemnt."
                         send_text(self.user_num, message, wamid)
                         # state remains the same
 
@@ -490,7 +490,7 @@ class WAChatState:
                                 "Mobile wallet number: {n}\n".format(n=payment.mobile_wallet_number) + \
                                 "Reference: {ref}\n".format(ref=payment.uuid) + "Status: {s}\n".format(s=payment.status) + \
                                 "Last updated at: {dt}\n".format(dt=str(payment.updated)) + \
-                                "\n\n App 263775409679 for any queries. \n\n Select another transaction or *0* to go back to main menu"
+                                "\n\nApp 263775409679 for any queries. \n\nSelect another transaction or *0* to go back to main menu"
                             send_text(self.user_num, message, wamid)
                             # keep state
 

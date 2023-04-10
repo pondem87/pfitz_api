@@ -18,7 +18,7 @@ model_max_tokens = config('OPENAI_COMPLETION_MODEL_MAX_TOKENS', cast=int)
 model_encoder = config('OPENAI_COMPLETION_MODEL_ENCODER')
 chat_completion_temp = config('OPENAI_CHAT_COMPLETION_TEMP', default=0.5, cast=float)
 
-ref_reward_tokens = config('REFERRAL_REWARD_TOKENS')
+ref_reward_tokens = config('REFERRAL_REWARD_TOKENS', cast=int)
 
 # FUNCTIONS
 
@@ -184,7 +184,7 @@ def process_ref_code(ref):
     
     try:
         profile = Profile.objects.get(ref=ref_uuid)
-        profile.tokens_remaining += ref_reward_tokens
+        profile.tokens_remaining = int(profile.tokens_remaining) + ref_reward_tokens
         profile.save()
     except Profile.DoesNotExist:
         logger.info("Referral code failed: Code=%s", ref_uuid)
