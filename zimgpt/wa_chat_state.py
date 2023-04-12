@@ -124,7 +124,7 @@ class WAChatState:
     def isTimeStampExpired(self):
         return timezone.now() - self.timestamp > timedelta(hours=chat_expiration_time)
 
-    def transition(self, wamid, input):
+    def transition(self, user, wamid, input):
 
         logger.debug("State transition called")
 
@@ -165,7 +165,6 @@ class WAChatState:
                     # procees ref code
                     process_ref_code(input)
                 else:
-                    user = get_user_model().objects.get(phone_number=self.user_num)
                     message = "Welcome back to ZimGPT, {name}. Remember you can also access this service online for better readability and copy-paste functionality for your projects and assignments using the link below.\n\n How may I assist you today?".format(name=user.name) + WAChatState._menu_text
                     send_text(self.user_num, message, wamid)
                     # update state
@@ -177,7 +176,6 @@ class WAChatState:
                 if str(input) == '0':
                     if len(self.user_name.strip()) > 0:
                         # use whats app profile name
-                        user = get_user_model().objects.get(phone_number=self.user_num)
                         user.name = self.user_name
                         user.save()
                         message = "Thank you, {name}. How may I assist you today?".format(name=self.user_name) + WAChatState._menu_text
@@ -195,7 +193,6 @@ class WAChatState:
                         send_text(self.user_num, message, wamid)
                     else:
                         # good name
-                        user = get_user_model().objects.get(phone_number=self.user_num)
                         user.name = input
                         user.save()
                         message = "Thank you, {name}. How may I assist you today?".format(name=input) + WAChatState._menu_text
@@ -220,7 +217,6 @@ class WAChatState:
                             self.state = WAChatState._FREE_PROMPT
                         case 3:
                             # selected view and buy tokens
-                            user = get_user_model().objects.get(phone_number=self.user_num)
                             product_list = [WAChatState.Data.Product(index + 1, product.uuid, product.units_offered, product.price) for index, product in enumerate(Product.objects.filter(active=True).order_by('price'))]
                             message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\nIf you want to refill your tokens, select 1 from our product offerings:\n" + \
                                 "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in product_list) + \
@@ -239,7 +235,6 @@ class WAChatState:
                             self.state = WAChatState._CHECK_PAYMENT
                         case 5:
                             # selected get free tokens
-                            user = get_user_model().objects.get(phone_number=self.user_num)
                             messages = [
                                 "*You can get 50,000 tokens which is about 37,500 words!*\n\nFor every person you refer you get 50,000 tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp." + \
                                 "\n\nThe link is in the message below. Share it and earn more tokens.",
@@ -256,7 +251,6 @@ class WAChatState:
 
             #### case 4: Chat
             case WAChatState._CHAT:
-                user = get_user_model().objects.get(phone_number=self.user_num)
                 completion = get_chat_completion(user, input, self.data.conv_history)
                 if completion.isOkay():
                     # no error
@@ -268,7 +262,6 @@ class WAChatState:
 
             #### case 5: Prompt engineer
             case WAChatState._FREE_PROMPT:
-                user = get_user_model().objects.get(phone_number=self.user_num)
                 completion = get_completion(user, input)
                 if completion.isOkay():
                     # no error
@@ -416,7 +409,7 @@ class WAChatState:
 
                     # valid email, process payment
                     response = initiate_payment(
-                        get_user_model().objects.get(phone_number=self.user_num),
+                        user,
                         Product.objects.get(uuid=self.data.product_id),
                         self.data.payment_method,
                         self.data.payment_number,

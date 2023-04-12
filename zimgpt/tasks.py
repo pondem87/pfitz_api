@@ -83,10 +83,11 @@ def process_whatsapp_state_input(user_num: str, name: str, wamid: str, message: 
 
     # pass the incoming message to the state machine to determine the required transition
     if state_machine:
-        state_machine.transition(wamid=wamid, input=message)
+        state_machine.transition(user_profile.user, wamid=wamid, input=message)
         logger.debug("State machine transition ran!!:-)")
         #save the state data
         serializer = WAChatStateSerializer(state_machine)
+        user_profile = Profile.objects.get(user=user_profile.user)
         user_profile.wa_chat_state = serializer.data
         user_profile.save()
     else:
