@@ -1,5 +1,6 @@
 import tiktoken
 import re
+from .models import Profile
 
 import logging
 
@@ -14,8 +15,7 @@ base_chat_prompt = [
 def subtract_used_tokens(profile, used_tokens) -> int:
     logger.debug("Subtracting used tokens from profile:%s. Profile tokens=%s; Used tokens=%s", str(profile), str(profile.tokens_remaining), str(used_tokens))
     tokens_remaining = int(profile.tokens_remaining) - int(used_tokens)
-    profile.tokens_remaining = tokens_remaining
-    profile.save()
+    Profile.objects.filter(user=profile.user).update(tokens_remaining=tokens_remaining)
     return tokens_remaining
 
 def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:

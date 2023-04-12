@@ -177,9 +177,12 @@ def get_completion(user, prompt_text):
 
 def process_ref_code(ref):
 
+    logger.debug("Processing ref code: %s", str(ref))
+
     ref_uuid = is_valid_uuid(ref)
 
     if not ref_uuid:
+        logger.debug("Processing ref code: %s not valid ref code", str(ref))
         return
     
     try:
