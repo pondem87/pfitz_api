@@ -59,7 +59,9 @@ class WebhookAPIView(generics.GenericAPIView):
 
             name = getattr(contacts[index].profile, 'name', "")
 
-            process_app_msg(message.wa_from, name, message.id, message_text)
+            # process text messages only
+            if message.text:
+                process_app_msg(message.wa_from, name, message.id, message_text)
 
             index += 1
 
