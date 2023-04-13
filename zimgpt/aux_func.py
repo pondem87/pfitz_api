@@ -187,7 +187,7 @@ def process_ref_code(ref):
     
     try:
         profile = Profile.objects.get(ref=ref_uuid)
-        profile.tokens_remaining = int(profile.tokens_remaining) + ref_reward_tokens
+        profile.tokens_remaining = profile.tokens_remaining + ref_reward_tokens
         profile.save()
     except Profile.DoesNotExist:
         logger.info("Referral code failed: Code=%s", ref_uuid)
@@ -198,4 +198,5 @@ def is_valid_uuid(uuid_str):
         uuid_obj = uuid.UUID(uuid_str)
     except ValueError:
         return False
-    return str(uuid_obj) == uuid_str
+    
+    return str(uuid_obj)
