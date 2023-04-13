@@ -15,14 +15,11 @@ from django.core.asgi import get_asgi_application
 asgi_app = get_asgi_application()
 from .ws_auth_token import CustomAuthMiddleware
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.security.websocket import AllowedHostsOriginValidator
 from zimgpt.routing import urlpatterns
 
 application = ProtocolTypeRouter({
     "http": asgi_app,
-    "websocket": AllowedHostsOriginValidator(
-        CustomAuthMiddleware(
+    "websocket": CustomAuthMiddleware(
             URLRouter(urlpatterns)
         )
-    )
 })
