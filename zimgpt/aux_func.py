@@ -186,9 +186,11 @@ def process_ref_code(ref):
         return
     
     try:
-        profile = Profile.objects.get(ref=ref_uuid)
-        profile.tokens_remaining = profile.tokens_remaining + ref_reward_tokens
-        profile.save()
+        prof = Profile.objects.get(ref=ref_uuid)
+        logger.debug("Adding tokens: Profile=%s, Tokens=%s", str(prof), ref_uuid)
+        prof.tokens_remaining = prof.tokens_remaining + ref_reward_tokens
+        logger.debug("Saving profile: Profile=%s, Tokens=%s", str(prof), str(prof.tokens_remaining))
+        prof.save()
     except Profile.DoesNotExist:
         logger.info("Referral code failed: Code=%s", ref_uuid)
 
