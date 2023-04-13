@@ -10,7 +10,7 @@ class Profile(models.Model):
     chat_max_tokens = models.IntegerField(default=4000)
     wa_chat_state = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    ref = models.UUIDField(default=uuid.uuid4, editable=False)
+    ref = models.UUIDField(default=uuid.uuid4)
 
     def __str__(self):
         return self.user.phone_number
