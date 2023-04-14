@@ -451,10 +451,10 @@ class WebhookReferredProductSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Context.ReferredProduct(**validated_data)
 
 class WebhookContextSerializer(serializers.Serializer):
-    forwarded = serializers.BooleanField()
-    frequently_forwarded = serializers.BooleanField()
-    vars()["from"] = serializers.CharField()
-    id = serializers.CharField()
+    forwarded = serializers.BooleanField(required=False)
+    frequently_forwarded = serializers.BooleanField(required=False)
+    vars()["from"] = serializers.CharField(required=False)
+    id = serializers.CharField(required=False)
     referred_product = WebhookReferredProductSerializer(required=False)
 
     def create(self, validated_data):

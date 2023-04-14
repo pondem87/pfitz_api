@@ -181,7 +181,7 @@ class Webhook:
                             self.text = text
                     
                     class Context:
-                        def __init__(self, forwarded, frequently_forwarded, wa_from, id, referred_product):
+                        def __init__(self, forwarded=None, frequently_forwarded=None, wa_from=None, id=None, referred_product=None):
                             self.forwarded = forwarded
                             self.frequently_forwarded = frequently_forwarded
                             self.wa_from = wa_from
@@ -189,7 +189,7 @@ class Webhook:
                             self.referred_product = referred_product
 
                         class ReferredProduct:
-                            def __init__(self, catalog_id, product_retailer_id) -> None:
+                            def __init__(self, catalog_id=None, product_retailer_id=None) -> None:
                                 self.catalog_id = catalog_id
                                 self.product_retailer_id = product_retailer_id
 
