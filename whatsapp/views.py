@@ -5,7 +5,8 @@ from .serializers import WebhookObjectSerializer
 from .models import SentMessages, ReceivedMessages
 from decouple import config
 from zimgpt.tasks import process_whatsapp_state_input
-from whatsapp.aux_func import send_read_report
+from .aux_func import send_read_report
+from .models import ReceivedMessages
 import logging
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,10 @@ def process_app_msg(
 ):
     logger.debug("Processing received message: user number: %s", user_num)
 
-        # send read report
-    send_read_report(wamid)
+    # send read report
+    success = send_read_report(wamid)
+
+    # mark read in database
+    ReceivedMessages.objects.filter(wamid=wamid).update(read=True, read_notified=success)
 
     process_whatsapp_state_input.delay(user_num, name, wamid, message)

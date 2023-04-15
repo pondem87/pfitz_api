@@ -72,11 +72,15 @@ def send_read_report(wamid):
     response = requests.post(messages_url, headers=headers, json=payload)
 
     logger.debug("Read report response: %s", response.json())
+    
+    success = response.json()["success"]
 
-    if response.json()["success"]:
+    if success:
         logger.info("Updated 'read' status for wamid: %s", wamid)
     else:
         logger.error("Failed status update for wamid: %s", wamid)
+
+    return success
 
 
 # send prepared message to messages endpoint
