@@ -131,7 +131,7 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
 
     logger.debug("get_chat_completion_streamed: checking required tokens")
     required_tokens = model_max_tokens
-    completion_max_tokens = model_max_tokens - (prompt_tokens + 100)
+    completion_max_tokens = model_max_tokens - (prompt_tokens + 80)
 
     if (profile.tokens_remaining < required_tokens):
         error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens".format(required_tokens))

@@ -50,7 +50,8 @@ def get_chat_completion(user, prompt_text, messages=None):
                                                "You are low on tokens. You need at least {0} tokens".format(required_tokens))
         return ClientCompletionResponse(None, error)
 
-    completion_max_tokens = model_max_tokens - (prompt_tokens + 100)
+    completion_max_tokens = model_max_tokens - (prompt_tokens + 80)
+
     logger.debug("get_chat_completion: calling API")
 
     try:
