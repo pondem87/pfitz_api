@@ -122,6 +122,8 @@ class WAChatState:
             return False
         
     def isTimeStampExpired(self):
+        if self.state == WAChatState._GET_NAME:
+            return False
         return timezone.now() - self.timestamp > timedelta(hours=chat_expiration_time)
 
     def transition(self, user, wamid, input):
