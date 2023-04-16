@@ -10,8 +10,8 @@ bonus_tokens = config('INITIAL_ONBOARDING_TOKENS', default=0, cast=int)
 
 ### auxilliary functions
 def validate_phone_number(phone_number):
-    if not re.match("^\d+$", phone_number):
-        raise serializers.ValidationError("Only numeric characters expected")
+    if not re.match("^263\d+$", phone_number):
+        raise serializers.ValidationError("Expecting phone number starting with 263")
     return phone_number
 
 def validate_password(password):
