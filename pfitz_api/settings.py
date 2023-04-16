@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'knox',
+    'boto3',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -151,9 +152,31 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = config("STATIC_URL")
 
-STATIC_ROOT = config("STATIC_ROOT_DIR")
+# STATIC_ROOT = config("STATIC_ROOT_DIR")
+
+# from .cdn_config import (
+#     STORAGES,
+#     AWS_S3_ACCESS_KEY_ID,
+#     AWS_S3_SECRET_ACCESS_KEY,
+#     AWS_STORAGE_BUCKET_NAME,
+#     AWS_S3_REGION_NAME,
+#     AWS_LOCATION,
+#     # cloudfront url
+#     AWS_S3_CUSTOM_DOMAIN,
+# )
+
+from .cdn_config import (
+    STATICFILES_STORAGE,
+    DEFAULT_FILE_STORAGE,
+    AWS_S3_ACCESS_KEY_ID,
+    AWS_S3_SECRET_ACCESS_KEY,
+    AWS_STORAGE_BUCKET_NAME,
+    AWS_S3_REGION_NAME,
+    # cloudfront url
+    AWS_S3_CUSTOM_DOMAIN,
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
