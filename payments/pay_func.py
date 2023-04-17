@@ -1,6 +1,7 @@
 from rest_framework import status
-from .paynow import paynow
-from .models import Payment, Product
+from paynow import Paynow
+from decouple import config
+from .models import Payment
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,15 @@ def initiate_payment(user, product, method, phone_number, email):
         amount=product.price
     )
 
+    # create paynow instance for each payment
+    paynow = Paynow(
+            config("PAYNOW_INTEGRATION_ID"),
+            config("PAYNOW_INTEGRATION_KEY"),
+            config("PAYNOW_RETURN_URL"),
+            config("PAYNOW_RESULT_URL")
+        )
+
+    # create payment
     payment = paynow.create_payment(db_payment.uuid, email)
 
     logger.debug("New trans for: %s", product.price)
@@ -50,6 +60,13 @@ def initiate_payment(user, product, method, phone_number, email):
 def check_payment_status(payment):
 
     if not (payment.status == Payment.STATUS_PAID or payment.status == Payment.STATUS_CANCELLED or payment.status == Payment.STATUS_REJECTED or payment.status == Payment.STATUS_REFUNDED):
+
+        paynow = Paynow(
+            config("PAYNOW_INTEGRATION_ID"),
+            config("PAYNOW_INTEGRATION_KEY"),
+            config("PAYNOW_RETURN_URL"),
+            config("PAYNOW_RESULT_URL")
+        )
 
         response = paynow.check_transaction_status(payment.poll_url)
 

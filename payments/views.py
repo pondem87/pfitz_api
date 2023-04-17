@@ -3,11 +3,12 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .serializers import ProductSerializer, PaymentSerializer, InitiatePaymentSerializer
 from .models import Product, Payment
-from .paynow import paynow
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from user_accounts.permissions import IsVerifiedUser
 from rest_framework.settings import api_settings
 from .pay_func import initiate_payment, check_payment_status
+from paynow import Paynow
+from decouple import config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,13 @@ class UpdatePaymentAPIView(generics.GenericAPIView):
         logger.info("Upstream API initiated payment status update: %s", str(request.data))
 
         if request.data.get("pollurl", None):
+
+            paynow = Paynow(
+                config("PAYNOW_INTEGRATION_ID"),
+                config("PAYNOW_INTEGRATION_KEY"),
+                config("PAYNOW_RETURN_URL"),
+                config("PAYNOW_RESULT_URL")
+            )
 
             response = paynow.check_transaction_status(request.data.get("pollurl"))
 
