@@ -15,11 +15,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from .views import HealthCheckView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('account/', include('user_accounts.urls')),
     path('zimgpt/', include('zimgpt.urls')),
     path('whatsapp/', include('whatsapp.urls')),
-    path('payment/', include('payments.urls'))
+    path('payment/', include('payments.urls')),
+    path('alive/', HealthCheckView.as_view()),
 ]
