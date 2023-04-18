@@ -69,18 +69,25 @@ def send_read_report(wamid):
         "authorization": auth_header,
     }
 
-    response = requests.post(messages_url, headers=headers, json=payload)
+    try:
+        response = requests.post(messages_url, headers=headers, json=payload)
 
-    logger.debug("Read report response: %s", str(response.json()))
+        logger.info("Read report response: %s", str(response.json()))
+        
+        success = response.json()["success"] if response.status_code == 200 else False
+
+        if success:
+            logger.info("Updated 'read' status for wamid: %s", wamid)
+        else:
+            logger.error("Failed status update for wamid: %s", wamid)
+
+        return success
     
-    success = response.json()["success"]
+    except Exception as err:
 
-    if success:
-        logger.info("Updated 'read' status for wamid: %s", wamid)
-    else:
-        logger.error("Failed status update for wamid: %s", wamid)
+        logger.error("Error when sending read notification: %s", str(err))
+        return False
 
-    return success
 
 
 # send prepared message to messages endpoint
