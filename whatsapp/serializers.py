@@ -303,11 +303,11 @@ class WebhookStatusSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Status(**validated_data, conversation=conversation, errors=errors, pricing=pricing)
 
 class WebhookVideoSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    caption = serializers.CharField()
-    filename = serializers.CharField()
-    sha256 = serializers.CharField()
-    mime_type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    caption = serializers.CharField(required=False)
+    filename = serializers.CharField(required=False)
+    sha256 = serializers.CharField(required=False)
+    mime_type = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Video(**validated_data)
@@ -416,10 +416,10 @@ class WebhookInteractiveSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Interactive(type=type)
 
 class WebhookImageSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    caption = serializers.CharField()
-    sha256 = serializers.CharField()
-    mime_type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    caption = serializers.CharField(required=False)
+    sha256 = serializers.CharField(required=False)
+    mime_type = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Image(**validated_data)
@@ -433,11 +433,11 @@ class WebhookIdentitySerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Identity(**validated_data)
 
 class WebhookDocumentSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    caption = serializers.CharField()
-    filename = serializers.CharField()
-    sha256 = serializers.CharField()
-    mime_type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    caption = serializers.CharField(required=False)
+    filename = serializers.CharField(required=False)
+    sha256 = serializers.CharField(required=False)
+    mime_type = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Document(**validated_data)

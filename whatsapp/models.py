@@ -194,7 +194,7 @@ class Webhook:
                                 self.product_retailer_id = product_retailer_id
 
                     class Document:
-                        def __init__(self, id, caption, filename, sha256, mime_type):
+                        def __init__(self, id=None, caption=None, filename=None, sha256=None, mime_type=None):
                             self.id = id
                             self.caption = caption
                             self.filename = filename
@@ -208,7 +208,7 @@ class Webhook:
                             self.hash = hash
 
                     class Image:
-                        def __init__(self, id, caption, sha256, mime_type):
+                        def __init__(self, id=None, caption=None, sha256=None, mime_type=None):
                             self.id = id
                             self.caption = caption
                             self.sha256 = sha256
@@ -280,7 +280,7 @@ class Webhook:
                             self.body = body
 
                     class Video:
-                        def __init__(self, id, filename, sha256, caption, mime_type):
+                        def __init__(self, id=None, filename=None, sha256=None, caption=None, mime_type=None):
                             self.id = id
                             self.filename = filename
                             self.sha256 = sha256

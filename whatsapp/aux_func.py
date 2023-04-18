@@ -71,7 +71,7 @@ def send_read_report(wamid):
 
     response = requests.post(messages_url, headers=headers, json=payload)
 
-    logger.debug("Read report response: %s", response.json())
+    logger.debug("Read report response: %s", str(response.json()))
     
     success = response.json()["success"]
 
