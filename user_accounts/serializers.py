@@ -91,7 +91,7 @@ class UpdatePfitzUserSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 class PfitzLoginSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(validators=[validate_phone_number])
+    phone_number = serializers.CharField()
     password = serializers.CharField(style={'input_type': 'password'}, trim_whitespace=False)
     
     def validate(self, attrs):
