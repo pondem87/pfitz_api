@@ -30,6 +30,8 @@ def initiate_payment(user, product, method, phone_number, email):
     # create payment
     payment = paynow.create_payment(db_payment.uuid, email)
 
+    payment.items = []
+
     logger.debug("New trans for: %s", product.price)
 
     payment.add(product.product_name, product.price)
