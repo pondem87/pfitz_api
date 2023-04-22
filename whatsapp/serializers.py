@@ -484,7 +484,7 @@ class WebhookButtonSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Button(**validated_data)
 
 class WebhookTextSerializer(serializers.Serializer):
-    body = serializers.CharField()
+    body = serializers.CharField(allow_null=True)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Text(**validated_data)
