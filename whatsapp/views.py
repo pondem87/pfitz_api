@@ -33,7 +33,7 @@ class WebhookAPIView(generics.GenericAPIView):
             return Response(None, status=status.HTTP_200_OK)
         else:
             #parsing failed
-            logger.error("Serialising webhook failed: %s", str(serializer.errors))
+            logger.error("Serialising webhook Errors: %s; RequestData: %s", str(serializer.errors), str(request.data))
             return Response(None, status=status.HTTP_404_NOT_FOUND)
         
     ## webhook events
