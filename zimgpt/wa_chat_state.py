@@ -239,7 +239,7 @@ class WAChatState:
                         case 5:
                             # selected get free tokens
                             messages = [
-                                "*You can get {i} tokens which is about {j} words!*\n\nFor every person you refer you get 50,000 tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp.".format(i=str(referral_tokens), j=str(referral_tokens*0.75)) + \
+                                "*You can get {i} tokens which is about {j} words!*\n\nFor every person you refer you get {i} tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp.".format(i=str(referral_tokens), j=str(referral_tokens*0.75)) + \
                                 "\n\nThe link is in the message below. Share it and earn more tokens.",
                                 "https://wa.me/26777084294?text={code}".format(code=user.profile.ref)
                             ]
