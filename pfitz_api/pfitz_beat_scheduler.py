@@ -1,6 +1,7 @@
 from django_celery_beat.schedulers import DatabaseScheduler
 from decouple import config
 import pika
+import ssl
 
 import logging
 
@@ -12,10 +13,19 @@ class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
 
         try:
             logger.debug("Connecting to rabbitMQ")
-            self.lock_connection = pika.BlockingConnection(pika.ConnectionParameters(
-                host=config("PIKA_HOST"),
-                port=config("PIKA_PORT"),
-                credentials=pika.PlainCredentials(username=config("PIKA_USR"), password=config("PIKA_PWD"))))
+            # SSL Context for TLS configuration of Amazon MQ for RabbitMQ
+
+            if config("PIKA_SCHEME") == "SSL":
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+                ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
+                url = "amqps://{user}:{password}@{host}:5671".format(user=config("PIKA_USR"), password=config("PIKA_PWD"), host=config("PIKA_HOST"))
+                parameters = pika.URLParameters(url)
+                parameters.ssl_options = pika.SSLOptions(context=ssl_context)
+            else:
+                url = "amqp://{user}:{password}@{host}:5672".format(user=config("PIKA_USR"), password=config("PIKA_PWD"), host=config("PIKA_HOST"))
+                parameters = pika.URLParameters(url)
+
+            self.lock_connection = pika.BlockingConnection(parameters)
             return True
         except Exception as error:
             logger.error('Failed to connect to RabbitMQ: %s', str(error))
