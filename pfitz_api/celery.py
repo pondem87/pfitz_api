@@ -6,8 +6,8 @@ from celery import Celery
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'pfitz_api.settings')
 
-app = Celery('pfitz_api')
+celery_app = Celery('pfitz_api')
 
-app.config_from_object("django.conf:settings", namespace="CELERY")
+celery_app.config_from_object("django.conf:settings", namespace="CELERY")
 
-app.autodiscover_tasks()
+celery_app.autodiscover_tasks()

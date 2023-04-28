@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
 
     #custom
     'whatsapp',
@@ -92,10 +93,14 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": config("CHANNEL_LAYERS_BACKEND"),
         "CONFIG": {
-            "hosts": [(config("CHANNEL_LAYERS_HOST"), config("CHANNEL_LAYERS_PORT"))]
+            "host": config("CHANNEL_LAYERS_HOST")
         }
     }
 }
+
+CELERY_BROKER_URL = config("CELERY_BROKER_HOST")
+
+CELERY_BEAT_SCHEDULE_EXPIRES = config("CELERY_BEAT_SCHEDULE_EXPIRES", cast=int, default=43200)
 
 
 # CORS settings
@@ -144,7 +149,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Harare'
 
 USE_I18N = True
 

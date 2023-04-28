@@ -7,6 +7,7 @@ from rest_framework.settings import api_settings
 from rest_framework.response import Response
 from .serializers import ProfileSerializer, AnswersAPIRequestSerializer, AnswersListAPIRequestSerializer
 from .models import Profile, APIRequest
+from django.utils import timezone
 from decouple import config
 import logging
 
@@ -26,6 +27,8 @@ class GetProfileAPIView(generics.GenericAPIView):
     def get(self, request):
         try:
             profile = Profile.objects.get(user=request.user)
+            profile.last_engagement = timezone.now()
+            profile.save()
         except Profile.DoesNotExist:
             profile = Profile(user=request.user, tokens_remaining=bonus_tokens)
             profile.save()

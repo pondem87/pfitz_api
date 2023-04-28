@@ -8,9 +8,8 @@ logger = logging.getLogger(__name__)
 
 wa_temp_lang = config('WA_TEMPLATE_DEFAULT_LANG')
 
-debug = config('DEBUG', default=True, cast=bool)
-whatsapp_num_id = config('WHATSAPP_TEST_NUMBER_ID') if debug else config('WHATSAPP_NUMBER_ID')
-whatapp_bus_id = config('WHATSAPP_TEST_BUSINESS_ID') if debug else config('WHATSAPP_BUSINESS_ID')
+whatsapp_num_id = config('WHATSAPP_NUMBER_ID')
+whatapp_bus_id = config('WHATSAPP_BUSINESS_ID')
 whatsapp_access_token = config('WHATSAPP_ACCESS_TOKEN')
 messages_url = "https://graph.facebook.com/v16.0/{num_id}/messages".format(num_id=whatsapp_num_id)
 auth_header = "Bearer " + whatsapp_access_token

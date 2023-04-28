@@ -1,7 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 
+from pfitz_api.celery import celery_app
 from celery import shared_task
-from pfitz_api.celery import app
 
 import openai as oai
 from openai.error import OpenAIError
@@ -10,11 +10,13 @@ from django.contrib.auth import get_user_model
 from user_accounts.random_str import get_random_str
 from .models import Profile
 from .wa_chat_state import WAChatState, WAChatStateSerializer
-from .models import ClientCompletionResponse, APIRequest
+from .models import ClientCompletionResponse, APIRequest, TokenReload, DailyMetrics
 from .serializers import UpstreamChatCompletionResponseSerializer, ClientCompletionResponseSerializer
-from .util import num_tokens_from_string, subtract_used_tokens, base_chat_prompt
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
+from .util import num_tokens_from_string, subtract_used_tokens, base_chat_prompt, publish_message_to_group
+from django.utils import timezone
+from django.db.models import Sum, Q
+from whatsapp.aux_func import send_template
+import datetime
 import json
 import logging
 
@@ -32,7 +34,7 @@ bonus_tokens = config('INITIAL_ONBOARDING_TOKENS', default=0, cast=int)
 
 panctuation = [',', '.', '!', '?', ':', ';']
 
-@app.task(name="process_whatsapp_state_input")
+@celery_app.task(name="process_whatsapp_state_input")
 def process_whatsapp_state_input(user_num: str, name: str, wamid: str, message: str):
 
     new_password = None
@@ -89,13 +91,14 @@ def process_whatsapp_state_input(user_num: str, name: str, wamid: str, message: 
         serializer = WAChatStateSerializer(state_machine)
         user_profile = Profile.objects.get(user=user_profile.user)
         user_profile.wa_chat_state = serializer.data
+        user_profile.last_engagement = timezone.now()
         user_profile.save()
     else:
         logger.error("Failed to retrieve state object. user: %s", user_num)
 
 
 
-@app.task(name="get_chat_completion_streamed")
+@celery_app.task(name="get_chat_completion_streamed")
 def get_chat_completion_streamed(user_number, prompt_text, messages=None):
 
     logger.debug("get_chat_completion_streamed method called")
@@ -108,7 +111,6 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
     profile = user.profile
 
     # get channel layer
-    ch_layer = get_channel_layer()
     event_type = "chat_completion"
 
     # base prompt
@@ -134,13 +136,13 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
     completion_max_tokens = model_max_tokens - (prompt_tokens + 80)
 
     if (profile.tokens_remaining < required_tokens):
-        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens".format(required_tokens))
+        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens. You can buy more tokens".format(required_tokens))
         completion = ClientCompletionResponse(None, error)
 
         completion_serializer = ClientCompletionResponseSerializer(completion)
     
         # send response to channel
-        send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+        send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
         return
 
@@ -200,7 +202,7 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
                             completion_serializer = ClientCompletionResponseSerializer(completion)
 
                             # send response to channel
-                            send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+                            send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
                         else:
                             token_buf.append(obj.choices[0].delta.content)
@@ -222,7 +224,7 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
                     completion_serializer = ClientCompletionResponseSerializer(completion)
 
                     # send response to channel
-                    send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+                    send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
             else:
                 logger.error("Completions API response parsing failed: %s", str(response))
@@ -232,7 +234,7 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
                 completion_serializer = ClientCompletionResponseSerializer(completion)
             
                 # send response to channel
-                send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+                send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
         # save api request
         save_api_request(profile, APIRequest.SERVICE_CHAT, delta)
@@ -245,11 +247,11 @@ def get_chat_completion_streamed(user_number, prompt_text, messages=None):
         completion_serializer = ClientCompletionResponseSerializer(completion)
 
         # send response to channel
-        send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+        send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
         return
 
-@app.task(name="get_answer_completion_streamed")
+@celery_app.task(name="get_answer_completion_streamed")
 def get_answer_completion_streamed(user_number, prompt_text, citations, words):
 
     logger.debug("get_answer_completion_streamed method called")
@@ -262,7 +264,6 @@ def get_answer_completion_streamed(user_number, prompt_text, citations, words):
     profile = user.profile
 
     # get channel layer
-    ch_layer = get_channel_layer()
     event_type = "answer_completion"
 
     logger.debug("get_answer_completion_streamed: generating prompt")
@@ -288,13 +289,13 @@ def get_answer_completion_streamed(user_number, prompt_text, citations, words):
     completion_max_tokens = model_max_tokens - (prompt_tokens + 100)
 
     if (profile.tokens_remaining < required_tokens):
-        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens".format(required_tokens))
+        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens. You can buy more tokens.".format(required_tokens))
         completion = ClientCompletionResponse(None, error)
 
         completion_serializer = ClientCompletionResponseSerializer(completion)
     
         # send response to channel
-        send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+        send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
         return
 
@@ -354,7 +355,7 @@ def get_answer_completion_streamed(user_number, prompt_text, citations, words):
                             completion_serializer = ClientCompletionResponseSerializer(completion)
 
                             # send response to channel
-                            send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+                            send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
                         else:
                             token_buf.append(obj.choices[0].delta.content)
@@ -376,7 +377,7 @@ def get_answer_completion_streamed(user_number, prompt_text, citations, words):
                     completion_serializer = ClientCompletionResponseSerializer(completion)
 
                     # send response to channel
-                    send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+                    send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
             else:
                 logger.error("Completions API response parsing failed: %s", str(response))
@@ -386,7 +387,7 @@ def get_answer_completion_streamed(user_number, prompt_text, citations, words):
                 completion_serializer = ClientCompletionResponseSerializer(completion)
             
                 # send response to channel
-                send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+                send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
         # save api request
         save_api_request(profile, APIRequest.SERVICE_ANSWERS, delta)
@@ -399,18 +400,12 @@ def get_answer_completion_streamed(user_number, prompt_text, citations, words):
         completion_serializer = ClientCompletionResponseSerializer(completion)
 
         # send response to channel
-        send_to_channel(ch_layer, user.phone_number, event_type, completion_serializer.data)
+        send_to_channel(user.phone_number, event_type, completion_serializer.data)
 
         return
 
-def send_to_channel(ch_layer, group, type, data):
-    async_to_sync(ch_layer.group_send)(
-                    group,
-                    {
-                        "type": type,
-                        "data": json.dumps(data)
-                    }
-                )
+def send_to_channel(group, type, data):
+    publish_message_to_group(message={"type": type, "data": json.dumps(data)}, group=group)
 
 def save_api_request(profile, service, delta):
     APIRequest.objects.create(
@@ -425,3 +420,115 @@ def save_api_request(profile, service, delta):
     
 def get_user(phone_number):
     return get_user_model().objects.get(phone_number=phone_number)
+
+
+### BULK TASKS
+@shared_task
+def notify_low_balance():
+
+    # get list of users to be notified
+    my_user_profs = Profile.objects.filter(Q(tokens_remaining__lte=4090, notified_low_bal=0) | 
+                                    Q(tokens_remaining__lte=4090, notified_low_bal=1, low_bal_last_notified__lte=(timezone.now() - datetime.timedelta(hours=48))))
+    
+    # start notifying
+    for my_user_prof in my_user_profs:
+
+        # prepare and send template
+        params = [
+            {
+                "type": "text",
+                "text": str(my_user_prof.tokens_remaining)
+            },
+        ]
+
+        send_template(my_user_prof.user.phone_number, "low_balance_notification", params=params)
+
+        # update database
+        my_user_prof.notified_low_bal += 1
+        my_user_prof.low_bal_last_notified = timezone.now()
+        my_user_prof.save()
+
+
+@shared_task
+def notify_service_interruption(start, end, date, reason):
+
+    # get list of users to be notified
+    my_user_profs = Profile.objects.filter(last_engagement_gte=(timezone.now() - datetime.timedelta(hours=72)))
+
+    for my_user_prof in my_user_profs:
+
+        # prepare and send template
+        params = [
+            {
+                "type": "text",
+                "text": start
+            },
+            {
+                "type": "text",
+                "text": end
+            },
+            {
+                "type": "text",
+                "text": date
+            },
+            {
+                "type": "text",
+                "text": reason
+            },
+        ]
+
+        send_template(my_user_prof.user.phone_number, "service_interruption_notification", params=params)
+
+        # update database
+        my_user_prof.notified_low_bal += 1
+        my_user_prof.low_bal_last_notified = timezone.now()
+        my_user_prof.save()
+
+
+### DASHBOARD TASKS
+@shared_task
+def getDailyMetrics(year=None, month=None, day=None):
+    
+    # get the date to collect matrics for
+
+    if year and month and day:
+        date = datetime.date(year, month, day)
+    else:
+        date = datetime.date.today() - datetime.timedelta(days=1)
+
+    # daily actve users
+    daily_active_users = APIRequest.objects.filter(timestamp__date=date).values("profile").distinct().count()
+
+    # daily new users
+    daily_new_users = get_user_model().objects.filter(date_joined__date=date).count()
+
+    # daily token purchases
+    daily_token_purchases = TokenReload.objects.filter(load_timestamp__date=date, loaded=True).count()
+
+    # daily token purchases amount
+    daily_token_purchase_amount = TokenReload.objects.filter(load_timestamp__date=date, loaded=True).aggregate(Sum("payment__amount"))["payment__amount__sum"]
+
+    # daily api requests
+    daily_api_requests = APIRequest.objects.filter(timestamp__date=date).count()
+
+    # daily token usage
+    daily_token_usage = APIRequest.objects.filter(timestamp__date=date).aggregate(Sum("tokens_used"))["tokens_used__sum"]
+
+    # total users
+    total_users = get_user_model().objects.all().count()
+
+    daily_metrics, created = DailyMetrics.objects.update_or_create(
+        date = date,
+        defaults= {
+            "daily_active_users" :daily_active_users,
+            "daily_new_users": daily_new_users,
+            "daily_token_purchases": daily_token_purchases,
+            "daily_token_purchase_amount": daily_token_purchase_amount,
+            "daily_api_requests": daily_api_requests,
+            "daily_token_usage": daily_token_usage,
+            "total_users": total_users
+        }
+    )
+
+    daily_metrics.save()
+

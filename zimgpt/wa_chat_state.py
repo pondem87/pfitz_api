@@ -1,5 +1,4 @@
 from whatsapp.aux_func import send_text
-from django.contrib.auth import get_user_model
 from decouple import config
 from .aux_func import get_chat_completion, get_completion, process_ref_code
 from rest_framework import serializers, status
@@ -86,7 +85,8 @@ class WAChatState:
     _menu_text = "\n\nReply with\n\n *1*: _for_ Chat (chat with AI)\n *2*: _for_ Free Prompt (send custom prompts to AI)" + \
         "\n *3*: _to_ View And Buy Tokens\n *4*: _to_ View Payments\n *5*: _to_ Get Free Tokens \n\nFor help, whatsapp 263775409679. For more functions: https://zimgpt.pfitz.co.zw/"
     _menu_vars = ['1', '2', '3', '4', '5']
-    _reset_code = "*#exit"
+    _reset_codes = ["*#exit", "*#menu"]
+    _reset_code = "*#exit OR *#menu"
 
     class Data:
         def __init__(self,
@@ -117,7 +117,7 @@ class WAChatState:
         self.timestamp = timestamp
     
     def check_reset_code(input: str) -> bool:
-        if WAChatState._reset_code in input:
+        if input.strip() in WAChatState._reset_codes:
             return True
         else:
             return False
@@ -136,10 +136,13 @@ class WAChatState:
             self.state = WAChatState._START
             self.data = None
 
+        # if expiration time has elapsed since last message, reset state
         if self.isTimeStampExpired():
             self.state = WAChatState._START
             self.data = None
-            self.timestamp = timezone.now()
+
+        # reset time everytime there is a message
+        self.timestamp = timezone.now()
 
         match self.state:
 
@@ -221,7 +224,7 @@ class WAChatState:
                         case 3:
                             # selected view and buy tokens
                             product_list = [WAChatState.Data.Product(index + 1, product.uuid, product.units_offered, product.price) for index, product in enumerate(Product.objects.filter(active=True).order_by('price'))]
-                            message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\nIf you want to refill your tokens, select 1 from our product offerings:\n" + \
+                            message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\nIf you want to refill your tokens, select one from our product offerings:\n" + \
                                 "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in product_list) + \
                                 "\nOr *0*: To go back to main menu"
                             send_text(self.user_num, message, wamid)

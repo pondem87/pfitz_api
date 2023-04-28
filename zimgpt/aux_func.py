@@ -47,7 +47,7 @@ def get_chat_completion(user, prompt_text, messages=None):
 
     if (profile.tokens_remaining < required_tokens):
         error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION,
-                                               "You are low on tokens. You need at least {0} tokens".format(required_tokens))
+                                               "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.".format(required_tokens))
         return ClientCompletionResponse(None, error)
 
     completion_max_tokens = model_max_tokens - (prompt_tokens + 80)
@@ -119,7 +119,7 @@ def get_completion(user, prompt_text):
     required_tokens = model_max_tokens
 
     if (profile.tokens_remaining < required_tokens):
-        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens".format(required_tokens))
+        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.".format(required_tokens))
         return ClientCompletionResponse(None, error)
 
     completion_max_tokens = model_max_tokens - (num_tokens_from_string(str(prompt)) + 100)

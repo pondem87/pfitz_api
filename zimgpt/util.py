@@ -1,6 +1,8 @@
 import tiktoken
 import re
 from .models import Profile
+from pfitz_api.celery import celery_app
+import msgpack
 
 import logging
 
@@ -34,3 +36,18 @@ def is_single_special_char(string):
         return True
     else:
         return False
+
+# This function allows celery tasks to pass messages to websockets going directly through rabbitmq
+# This is possible because channels and celery are both using rabbitmq
+def publish_message_to_group(message, group: str) -> None:
+    with celery_app.producer_pool.acquire(block=True) as producer:
+        producer.publish(
+            msgpack.packb({
+              "__asgi_group__": group,
+              **message,
+            }),
+            exchange="groups",  # groups_exchange
+            content_encoding="binary",
+            routing_key=group,
+            retry=False,  # Channel Layer at-most once semantics
+        )

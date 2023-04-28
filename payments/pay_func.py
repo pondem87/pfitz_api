@@ -2,10 +2,16 @@ from rest_framework import status
 from paynow import Paynow
 from decouple import config
 from .models import Payment
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from whatsapp.aux_func import send_template
+from django.utils import timezone
+from datetime import timedelta
+import json
 import logging
 
 logger = logging.getLogger(__name__)
 
+currency = config("BASE_CURRENCY")
 
 def initiate_payment(user, product, method, phone_number, email):
     # start payment
@@ -47,6 +53,21 @@ def initiate_payment(user, product, method, phone_number, email):
 
         logger.debug("Paynow response: %s", str(response))
 
+        # trigger payment checking schedule
+        schedule, created = IntervalSchedule.objects.get_or_create(
+            every=5,
+            period=IntervalSchedule.MINUTES,
+        )
+
+        PeriodicTask.objects.create(
+            interval=schedule,                  # we created this above.
+            name=str(db_payment.uuid),          # simply describes this periodic task.
+            task='payments.tasks.update_payment_status',  # name of task.
+            args=json.dumps([str(db_payment.uuid),]),
+            expires=timezone.now() + timedelta(minutes=30)
+        )
+
+
         return (instructions, status.HTTP_200_OK)
 
     else:
@@ -59,7 +80,7 @@ def initiate_payment(user, product, method, phone_number, email):
         return (response.error, status.HTTP_400_BAD_REQUEST)
 
 
-def check_payment_status(payment):
+def check_payment_status(payment: Payment):
 
     if not (payment.status == Payment.STATUS_PAID or payment.status == Payment.STATUS_CANCELLED or payment.status == Payment.STATUS_REJECTED or payment.status == Payment.STATUS_REFUNDED):
 
@@ -102,3 +123,35 @@ def check_payment_status(payment):
 
         payment.external_ref = response.paynow_reference
         payment.save()
+
+        # send notification
+        params = [
+            {
+                "type": "text",
+                "text": "{amount}{currency}".format(amount=str(payment.amount), currency=currency)
+            },
+            {
+                "type": "text",
+                "text": "{units} {unit}".format(units=payment.product.units_offered, unit=payment.product.product_unit)
+            }]
+
+        if payment.status in [Payment.STATUS_APPROVED, Payment.STATUS_PAID]:
+            logger.info("Notification of payment update: sucess")
+
+            params.append({
+                "type": "text",
+                "text": "*successful*"
+            })
+
+        else:
+
+            params.append({
+                "type": "text",
+                "text": "*declined*"
+            })
+        
+        send_template(payment.user.phone_number, "payment_notification", params=params)
+
+        
+        
+            
