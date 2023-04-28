@@ -28,7 +28,7 @@ class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
             self.lock_connection = pika.BlockingConnection(parameters)
             return True
         except Exception as error:
-            logger.error('Failed to connect to RabbitMQ: %s', str(error))
+            logger.debug('Failed to connect to RabbitMQ: %s', str(error))
             self.lock_connection = None
             self.lock_channel = None
             return False
@@ -46,7 +46,7 @@ class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
             self.lock_channel.queue_declare(queue=self.lock_queue_name, exclusive=True)
             return True
         except Exception as error:
-            logger.error('Failed to declare exclusive queue: %s', str(error))
+            logger.debug('Failed to declare exclusive queue: %s', str(error))
             return False
         
     def doesLockQueueExist(self):
@@ -57,7 +57,7 @@ class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
             return True
         except Exception as error:
             # If the broker closes the channel, the queue doesn't exist
-            logger.error('Lock queue doesnt exist: %s', str(error))
+            logger.debug('Lock queue doesnt exist: %s', str(error))
             
             return False
             
@@ -69,7 +69,7 @@ class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
             return True
         except Exception as error:
             # If the broker closes the channel, the queue doesn't exist
-            logger.error('Lock queue doesnt exist: %s', str(error))
+            logger.debug('Lock queue doesnt exist: %s', str(error))
             
             return False
 
