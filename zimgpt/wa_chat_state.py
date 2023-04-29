@@ -279,7 +279,7 @@ class WAChatState:
 
             #### case 6: Choose and buy tokens
             case WAChatState._CHOOSE_PRODUCT:
-                if len(self.data.product_list):
+                if self.data.product_list is not None:
                     product_indices = [p.index for p in self.data.product_list]
                 else:
                     product_indices = [''] 
