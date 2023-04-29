@@ -507,12 +507,16 @@ def getDailyMetrics(year=None, month=None, day=None):
 
     # daily token purchases amount
     daily_token_purchase_amount = TokenReload.objects.filter(load_timestamp__date=date, loaded=True).aggregate(Sum("payment__amount"))["payment__amount__sum"]
+    if daily_token_purchase_amount is None:
+        daily_token_purchase_amount = 0
 
     # daily api requests
     daily_api_requests = APIRequest.objects.filter(timestamp__date=date).count()
 
     # daily token usage
     daily_token_usage = APIRequest.objects.filter(timestamp__date=date).aggregate(Sum("tokens_used"))["tokens_used__sum"]
+    if daily_token_usage is None:
+        daily_token_usage = 0
 
     # total users
     total_users = get_user_model().objects.all().count()
