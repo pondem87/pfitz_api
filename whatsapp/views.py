@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 verify_token = config('WA_WEBHOOK_VERIFY_TOKEN')
+this_apps_number = config('WHATSAPP_NUMBER_ID')
 
 # Create your views here.
 class WebhookAPIView(generics.GenericAPIView):
@@ -24,11 +25,14 @@ class WebhookAPIView(generics.GenericAPIView):
         serializer = WebhookObjectSerializer(data=request.data)
         if serializer.is_valid():
             webhook = serializer.save()
-            
-            if webhook.entry[0].changes[0].value.messages:
-                self.on_message_received(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.contacts, webhook.entry[0].changes[0].value.messages)
-            elif webhook.entry[0].changes[0].value.statuses:
-                self.on_status_update(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.statuses)
+
+            # check if we are responding
+            # we only respond to messages from our phone
+            if webhook.entry[0].changes[0].value.metadata.phone_number_id == this_apps_number:
+                if webhook.entry[0].changes[0].value.messages:
+                    self.on_message_received(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.contacts, webhook.entry[0].changes[0].value.messages)
+                elif webhook.entry[0].changes[0].value.statuses:
+                    self.on_status_update(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.statuses)
 
             return Response(None, status=status.HTTP_200_OK)
         else:
@@ -49,6 +53,7 @@ class WebhookAPIView(generics.GenericAPIView):
                 message_text = message.text.body
             else:
                 message_text = "No text available"
+                logger.info("None text message: %s", str(message))
 
             ReceivedMessages.objects.create(
                 wamid = message.id,
