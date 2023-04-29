@@ -86,7 +86,7 @@ class WAChatState:
         "\n *3*: _to_ View And Buy Tokens\n *4*: _to_ View Payments\n *5*: _to_ Get Free Tokens \n\nFor help, whatsapp 263775409679. For more functions: https://zimgpt.pfitz.co.zw/"
     _menu_vars = ['1', '2', '3', '4', '5']
     _reset_codes = ["*#exit", "*#menu"]
-    _reset_code = "*#exit OR *#menu"
+    _reset_code = "*#exit or *#menu"
 
     class Data:
         def __init__(self,
@@ -279,7 +279,10 @@ class WAChatState:
 
             #### case 6: Choose and buy tokens
             case WAChatState._CHOOSE_PRODUCT:
-                product_indices = [p.index for p in self.data.product_list]
+                if len(self.data.product_list):
+                    product_indices = [p.index for p in self.data.product_list]
+                else:
+                    product_indices = [''] 
 
                 # check if any product was selected
                 try:
