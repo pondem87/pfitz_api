@@ -132,7 +132,7 @@ def check_payment_status(payment: Payment):
             },
             {
                 "type": "text",
-                "text": "{units} {unit}".format(units=payment.product.units_offered, unit=payment.product.product_unit)
+                "text": "{units} {unit}s".format(units=payment.product.units_offered, unit=payment.product.product_unit)
             }]
 
         if payment.status in [Payment.STATUS_APPROVED, Payment.STATUS_PAID]:
