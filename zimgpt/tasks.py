@@ -489,7 +489,15 @@ def notify_service_interruption(start, end, date, reason):
 @shared_task
 def getDailyMetrics(year=None, month=None, day=None):
     
-    # get the date to collect matrics for
+    # get the date to collect metrics for
+    try:
+        year = int(year)
+        month = int(month)
+        day = int(day)
+    except ValueError:
+        year = None
+        month = None
+        day = None
 
     if year and month and day:
         date = datetime.date(year, month, day)

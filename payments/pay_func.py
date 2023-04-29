@@ -55,7 +55,7 @@ def initiate_payment(user, product, method, phone_number, email):
 
         # trigger payment checking schedule
         schedule, created = IntervalSchedule.objects.get_or_create(
-            every=5,
+            every=3,
             period=IntervalSchedule.MINUTES,
         )
 
@@ -64,7 +64,7 @@ def initiate_payment(user, product, method, phone_number, email):
             name=str(db_payment.uuid),          # simply describes this periodic task.
             task='payments.tasks.update_payment_status',  # name of task.
             args=json.dumps([str(db_payment.uuid),]),
-            expires=timezone.now() + timedelta(minutes=30)
+            expires=timezone.now() + timedelta(minutes=18)
         )
 
 
