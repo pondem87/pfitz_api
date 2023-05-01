@@ -426,9 +426,13 @@ def get_user(phone_number):
 @shared_task
 def notify_low_balance():
 
+    logger.info("Sending low balance notification.")
+
     # get list of users to be notified
     my_user_profs = Profile.objects.filter(Q(tokens_remaining__lte=4090, notified_low_bal=0) | 
                                     Q(tokens_remaining__lte=4090, notified_low_bal=1, low_bal_last_notified__lte=(timezone.now() - datetime.timedelta(hours=48))))
+    
+    logger.info("Sending low balance notification to %s users.", str(len(my_user_profs)))
     
     # start notifying
     for my_user_prof in my_user_profs:
@@ -451,6 +455,8 @@ def notify_low_balance():
 
 @shared_task
 def notify_service_interruption(start, end, date, reason):
+
+    logger("Sending service interruption notice.")
 
     # get list of users to be notified
     my_user_profs = Profile.objects.filter(last_engagement_gte=(timezone.now() - datetime.timedelta(hours=72)))
@@ -487,22 +493,28 @@ def notify_service_interruption(start, end, date, reason):
 
 ### DASHBOARD TASKS
 @shared_task
-def getDailyMetrics(year=None, month=None, day=None):
+def get_daily_metrics(year=None, month=None, day=None):
+
+    logger.info("Generating daily statistics")
     
     # get the date to collect metrics for
     try:
+        logger.info("Checking parameters validity...")
         year = int(year)
         month = int(month)
         day = int(day)
     except ValueError:
+        logger.warn("Invalid parameters, set to default...")
         year = None
         month = None
         day = None
 
-    if year and month and day:
+    if year is not None and month is not None and day is not None:
         date = datetime.date(year, month, day)
     else:
         date = datetime.date.today() - datetime.timedelta(days=1)
+
+    logger.info("Querying database for daily statistics variables with date = %s", str(date))
 
     # daily actve users
     daily_active_users = APIRequest.objects.filter(timestamp__date=date).values("profile").distinct().count()
@@ -544,3 +556,16 @@ def getDailyMetrics(year=None, month=None, day=None):
 
     daily_metrics.save()
 
+    if created:
+        logger.info("Saved daily statistics to database as new object.")
+    else:
+        logger.info("Updated daily statistics to database on old object.")
+
+
+# Send promotional message
+@shared_task
+def send_promotional_message(template):
+
+    logger.info("Sending promotional message with template: %s", template)
+
+    send_template("26776323310", "service_interruption_notification", params=None)
