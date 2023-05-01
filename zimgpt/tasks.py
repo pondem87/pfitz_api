@@ -498,19 +498,18 @@ def get_daily_metrics(year=None, month=None, day=None):
     logger.info("Generating daily statistics")
     
     # get the date to collect metrics for
-    try:
-        logger.info("Checking parameters validity...")
-        year = int(year)
-        month = int(month)
-        day = int(day)
-    except ValueError:
-        logger.warn("Invalid parameters, set to default...")
-        year = None
-        month = None
-        day = None
-
+    
     if year is not None and month is not None and day is not None:
-        date = datetime.date(year, month, day)
+        try:
+            logger.info("Checking parameters validity...")
+            year = int(year)
+            month = int(month)
+            day = int(day)
+
+            date = datetime.date(year, month, day)
+        except ValueError:
+            logger.warn("Invalid parameters, using the default date...")
+            date = datetime.date.today() - datetime.timedelta(days=1)        
     else:
         date = datetime.date.today() - datetime.timedelta(days=1)
 
@@ -538,8 +537,8 @@ def get_daily_metrics(year=None, month=None, day=None):
     if daily_token_usage is None:
         daily_token_usage = 0
 
-    # total users
-    total_users = get_user_model().objects.all().count()
+    # total users at the date in question
+    total_users = get_user_model().objects.filter(date_joined__date__lte=date).count()
 
     daily_metrics, created = DailyMetrics.objects.update_or_create(
         date = date,
