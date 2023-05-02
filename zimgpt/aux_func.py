@@ -20,6 +20,9 @@ chat_completion_temp = config('OPENAI_CHAT_COMPLETION_TEMP', default=0.5, cast=f
 
 ref_reward_tokens = config('REFERRAL_REWARD_TOKENS', cast=int)
 
+whats_app_menu_cmd = "*#exit or *#menu"
+go_to_menu_how = "\n\nTo go to main menu send {0}".format(whats_app_menu_cmd)
+
 # FUNCTIONS
 
 def get_chat_completion(user, prompt_text, messages=None):
@@ -47,7 +50,7 @@ def get_chat_completion(user, prompt_text, messages=None):
 
     if (profile.tokens_remaining < required_tokens):
         error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION,
-                                               "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.".format(required_tokens))
+                                               "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.{1}".format(required_tokens, go_to_menu_how))
         return ClientCompletionResponse(None, error)
 
     completion_max_tokens = model_max_tokens - (prompt_tokens + 80)
@@ -119,7 +122,7 @@ def get_completion(user, prompt_text):
     required_tokens = model_max_tokens
 
     if (profile.tokens_remaining < required_tokens):
-        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.".format(required_tokens))
+        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.{1}".format(required_tokens, go_to_menu_how))
         return ClientCompletionResponse(None, error)
 
     completion_max_tokens = model_max_tokens - (num_tokens_from_string(str(prompt)) + 100)

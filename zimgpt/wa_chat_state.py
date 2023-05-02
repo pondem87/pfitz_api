@@ -427,7 +427,7 @@ class WAChatState:
 
                     if response[1] == status.HTTP_200_OK:
                         # payment request accepted
-                        message = "Transaction initiated. If you are not automatically prompted to complete payment, follow these instructions:\n\n" + response[0]
+                        message = "Transaction initiated. If you are not automatically prompted to complete payment, follow these instructions:\n\n" + response[0] + "\n\nSend 'Hi' to continue."
                         send_text(self.user_num, message, wamid)
                         self.data = None
                         self.state = WAChatState._START

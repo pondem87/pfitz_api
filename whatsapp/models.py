@@ -267,7 +267,7 @@ class Webhook:
                             self.animated = animated
 
                     class System:
-                        def __init__(self, body, identity,  wa_id, type, customer, new_wa_id=None):
+                        def __init__(self, body=None, identity=None,  wa_id=None, type=None, customer=None, new_wa_id=None):
                             self.body = body
                             self.identity = identity
                             self.new_wa_id = new_wa_id

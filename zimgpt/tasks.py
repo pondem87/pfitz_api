@@ -13,6 +13,7 @@ from .wa_chat_state import WAChatState, WAChatStateSerializer
 from .models import ClientCompletionResponse, APIRequest, TokenReload, DailyMetrics
 from .serializers import UpstreamChatCompletionResponseSerializer, ClientCompletionResponseSerializer
 from .util import num_tokens_from_string, subtract_used_tokens, base_chat_prompt, publish_message_to_group
+from django_celery_beat.models import PeriodicTask
 from django.utils import timezone
 from django.db.models import Sum, Q
 from whatsapp.aux_func import send_template
@@ -567,4 +568,12 @@ def send_promotional_message(template):
 
     logger.info("Sending promotional message with template: %s", template)
 
-    send_template("26776323310", "service_interruption_notification", params=None)
+    send_template("26776323310", template, params=None)
+
+# Delete expired tasks
+@shared_task
+def delete_expired_tasks():
+    # delete all expired tasks
+
+    logger.info("Deleting all expired periodic tasks")
+    PeriodicTask.objects.filter(expires__lte=timezone.now()).delete()

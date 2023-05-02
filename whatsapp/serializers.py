@@ -313,12 +313,12 @@ class WebhookVideoSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Video(**validated_data)
 
 class WebhookSystemSerializer(serializers.Serializer):
-    body = serializers.CharField()
-    identity = serializers.CharField()
-    new_wa_id = serializers.CharField()
-    wa_id = serializers.CharField()
-    type = serializers.CharField()
-    customer = serializers.CharField()
+    body = serializers.CharField(required=False)
+    identity = serializers.CharField(required=False)
+    new_wa_id = serializers.CharField(required=False)
+    wa_id = serializers.CharField(required=False)
+    type = serializers.CharField(required=False)
+    customer = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.System(**validated_data)
