@@ -263,7 +263,7 @@ class WAChatState:
                     self.data.conv_history = completion.response.prompt_history
                     send_text(self.user_num, completion.response.generated_text, wamid)
                 else:
-                    message = "Error: Ooops, something went wrong!\n\n_Error message: {msg}_".format(msg=completion.error.message)
+                    message = "Error: Ooops, something went wrong!\n\nError message: {msg}".format(msg=completion.error.message)
                     send_text(self.user_num, message, wamid)
 
             #### case 5: Prompt engineer
@@ -273,7 +273,7 @@ class WAChatState:
                     # no error
                     send_text(self.user_num, completion.response.generated_text, wamid)
                 else:
-                    message = "Error: Ooops, something went wrong!\n\n_Error message: {msg}_".format(msg=completion.error.message)
+                    message = "Error: Ooops, something went wrong!\n\nError message: {msg}".format(msg=completion.error.message)
                     send_text(self.user_num, message, wamid)
                 pass
 

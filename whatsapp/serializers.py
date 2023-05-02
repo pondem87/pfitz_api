@@ -800,7 +800,7 @@ class ParameterSerializer(serializers.Serializer):
 class ComponentSerializer(serializers.Serializer):
     type = serializers.CharField()
     sub_type = serializers.CharField(required=False)
-    parameters = ParameterSerializer(many=True)
+    parameters = ParameterSerializer(many=True, required=False)
     index = serializers.CharField(required=False)
 
 class TemplateSerializer(serializers.Serializer):
