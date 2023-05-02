@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import WebhookObjectSerializer
+from .serializers import WebhookObjectSerializer, WebhookMessageSerializer
 from .models import SentMessages, ReceivedMessages
 from decouple import config
 from zimgpt.tasks import process_whatsapp_state_input
@@ -53,7 +53,9 @@ class WebhookAPIView(generics.GenericAPIView):
                 message_text = message.text.body
             else:
                 message_text = "No text available"
-                logger.info("None text message: %s", str(message))
+                # print message for debugging
+                serialized_msg = WebhookMessageSerializer(data=message)
+                logger.info("None text message: %s", str(serialized_msg.data))
 
             ReceivedMessages.objects.create(
                 wamid = message.id,

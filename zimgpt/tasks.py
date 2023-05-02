@@ -444,6 +444,10 @@ def notify_low_balance():
                 "type": "text",
                 "text": str(my_user_prof.tokens_remaining)
             },
+            {
+                "type": "text",
+                "text": "*#menu or *#exit"
+            }
         ]
 
         send_template(my_user_prof.user.phone_number, "low_balance_notification", params=params)
@@ -568,7 +572,7 @@ def send_promotional_message(template):
 
     logger.info("Sending promotional message with template: %s", template)
 
-    send_template("26776323310", template, params=None)
+    send_template("26776323310", template)
 
 # Delete expired tasks
 @shared_task

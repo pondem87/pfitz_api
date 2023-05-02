@@ -14,20 +14,27 @@ whatsapp_access_token = config('WHATSAPP_ACCESS_TOKEN')
 messages_url = "https://graph.facebook.com/v16.0/{num_id}/messages".format(num_id=whatsapp_num_id)
 auth_header = "Bearer " + whatsapp_access_token
 
-def send_template(dest, template, params, lang=wa_temp_lang):
+def send_template(dest, template, params=None, lang=wa_temp_lang):
 
     logger.debug("Running send_template")
 
-    # create parameters array of objects
+    # create parameters array of objects if params not None
     parameters = []
-    for param in params:
-        parameters.append(Message.Template.Component.Parameter(**param))
+    if params is not None:
+        for param in params:
+            parameters.append(Message.Template.Component.Parameter(**param))
+    else:
+        parameters = None
     
     # create template languge object
     language = Message.Template.Language(code=lang)
 
     # place parameters into template component
-    components = [Message.Template.Component(parameters=parameters),]
+    # components can be set to None if there is no component
+    if parameters is not None:
+        components = [Message.Template.Component(parameters=parameters),]
+    else:
+        components = None
 
     # create template object
     template = Message.Template(name=template, language=language, components=components)

@@ -41,7 +41,7 @@ class Message():
         self.context = context
 
     class Template:
-        def __init__(self, name, language, components):
+        def __init__(self, name, language, components=None):
             self.name = name
             self.language = language
             self.components = components
