@@ -42,42 +42,54 @@ def initiate_payment(user, product, method, phone_number, email):
 
     payment.add(product.product_name, product.price)
 
-    response = paynow.send_mobile(payment, phone_number, method)
+    try:
+        # Lets try this transaction so we can catch any exception that have been slipping away
 
-    if response.success:
-        # Get the link to redirect the user to, then use it as you see fit
-        instructions = response.instruction
-        # Get the poll url (used to check the status of a transaction). You might want to save this in your DB
-        db_payment.poll_url = response.poll_url
-        db_payment.save()
+        response = paynow.send_mobile(payment, phone_number, method)
 
-        logger.debug("Paynow response: %s", str(response))
+        if response.success:
+            # Get the link to redirect the user to, then use it as you see fit
+            instructions = response.instruction
+            # Get the poll url (used to check the status of a transaction). You might want to save this in your DB
+            db_payment.poll_url = response.poll_url
+            db_payment.save()
 
-        # trigger payment checking schedule
-        schedule, created = IntervalSchedule.objects.get_or_create(
-            every=3,
-            period=IntervalSchedule.MINUTES,
-        )
+            logger.debug("Paynow response: %s", str(response))
 
-        PeriodicTask.objects.create(
-            interval=schedule,                  # we created this above.
-            name=str(db_payment.uuid),          # simply describes this periodic task.
-            task='payments.tasks.update_payment_status',  # name of task.
-            args=json.dumps([str(db_payment.uuid),]),
-            expires=timezone.now() + timedelta(minutes=18)
-        )
+            # trigger payment checking schedule
+            schedule, created = IntervalSchedule.objects.get_or_create(
+                every=3,
+                period=IntervalSchedule.MINUTES,
+            )
+
+            PeriodicTask.objects.create(
+                interval=schedule,                  # we created this above.
+                name=str(db_payment.uuid),          # simply describes this periodic task.
+                task='payments.tasks.update_payment_status',  # name of task.
+                args=json.dumps([str(db_payment.uuid),]),
+                expires=timezone.now() + timedelta(minutes=18)
+            )
 
 
-        return (instructions, status.HTTP_200_OK)
+            return (instructions, status.HTTP_200_OK)
 
-    else:
-        # failed request
-        logger.error("Paynow error: %s", str(response))
+        else:
+            # failed request
+            logger.error("Paynow error: %s", str(response))
+
+            db_payment.status = Payment.STATUS_REJECTED
+            db_payment.save()
+
+            return (response.error, status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as error:
+        # lets reject the transaction and log the exception
+        logger.error("Error while initiating a transaction: %s", str(error))
 
         db_payment.status = Payment.STATUS_REJECTED
         db_payment.save()
 
-        return (response.error, status.HTTP_400_BAD_REQUEST)
+        return ("Transaction could not be initiated", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 def check_payment_status(payment: Payment):
