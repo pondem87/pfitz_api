@@ -54,7 +54,7 @@ class WebhookAPIView(generics.GenericAPIView):
             else:
                 message_text = "No text available"
                 # print message for debugging
-                serialized_msg = WebhookMessageSerializer(data=message)
+                serialized_msg = WebhookMessageSerializer(instance=message)
                 logger.info("None text message: %s", str(serialized_msg.data))
 
             ReceivedMessages.objects.create(
