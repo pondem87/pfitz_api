@@ -1,8 +1,9 @@
 from django.shortcuts import render
+from typing import List
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .serializers import WebhookObjectSerializer, WebhookMessageSerializer
-from .models import SentMessages, ReceivedMessages
+from .models import SentMessages, ReceivedMessages, Webhook
 from decouple import config
 from zimgpt.tasks import process_whatsapp_state_input
 from .aux_func import send_read_report
@@ -41,35 +42,36 @@ class WebhookAPIView(generics.GenericAPIView):
             return Response(None, status=status.HTTP_404_NOT_FOUND)
         
     ## webhook events
-    def on_message_received(self, request, account_id, metadata, contacts, messages):
+    def on_message_received(self, request, account_id, metadata, contacts, messages: List[Webhook.Entry.Change.Value.Message]):
         logger.debug("Messages received")
 
         #index to iterate contacts
         index = 0
 
         for message in messages:
-            message_text = ''
-            if message.text:
-                message_text = message.text.body
-            else:
-                message_text = "No text available"
-                # print message for debugging
-                serialized_msg = WebhookMessageSerializer(instance=message)
-                logger.info("None text message: %s", str(serialized_msg.data))
+
+            name = getattr(contacts[index].profile, 'name', "")
+
+            match message.type:
+                case 'text':
+                    process_app_msg(message.wa_from, name, message.id, message.text.body)
+                case _:
+                    # message with unhandled type
+                    # print message for debugging
+                    try:
+                        serialized_msg = WebhookMessageSerializer(instance=message)
+                        logger.info("None text message: %s", str(serialized_msg.data))
+                    except Exception as error:
+                        logger.info("Failed to serialize message", str(error))
+            
 
             ReceivedMessages.objects.create(
                 wamid = message.id,
                 user_number = message.wa_from,
                 user_wa_id = contacts[index].wa_id,
                 message_type = message.type,
-                message_text = message_text
+                message_text = getattr(message.text, "body", None)
             )
-
-            name = getattr(contacts[index].profile, 'name', "")
-
-            # process text messages only
-            if message.text:
-                process_app_msg(message.wa_from, name, message.id, message_text)
 
             index += 1
 
