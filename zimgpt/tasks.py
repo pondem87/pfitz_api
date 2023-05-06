@@ -573,7 +573,7 @@ def send_promotional_message(template):
 
     logger.info("Sending promotional message with template: %s", template)
 
-    user_profs = Profile.objects.filter(last_engagement__date__lte=datetime.date.today()-datetime.timedelta(days=5))
+    user_profs = Profile.objects.filter(last_engagement__date__lte=datetime.date.today()-datetime.timedelta(days=5), stop_promotions=False)
 
     logger.info("Promotional message will be sent to %s clients.", str(len(user_profs)))
 
