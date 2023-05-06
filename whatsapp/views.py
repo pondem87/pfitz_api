@@ -7,7 +7,8 @@ from .models import SentMessages, ReceivedMessages, Webhook
 from decouple import config
 from zimgpt.tasks import process_whatsapp_state_input
 from .aux_func import send_read_report
-from .models import ReceivedMessages
+from .tasks import send_app_text
+from zimgpt.models import Profile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,6 @@ class WebhookAPIView(generics.GenericAPIView):
     def post(self, request):
 
         logger.debug("Received webhook data: %s", str(request.data))
-        logger.info("Received webhook: %s", str(request.data))
         
         serializer = WebhookObjectSerializer(data=request.data)
         if serializer.is_valid():
@@ -56,9 +56,12 @@ class WebhookAPIView(generics.GenericAPIView):
             match message.type:
                 case 'text':
                     process_app_msg(message.wa_from, name, message.id, message.text.body)
+                case 'button':
+                    process_app_button_pressed(message.wa_from, name, message.id, message.button)
                 case _:
                     # message with unhandled type
                     # print message for debugging
+                    logger.warn("Received unhandled message type: %s", message.type)
                     try:
                         serialized_msg = WebhookMessageSerializer(instance=message)
                         logger.info("None text message: %s", str(serialized_msg.data))
@@ -117,3 +120,20 @@ def process_app_msg(
     ReceivedMessages.objects.filter(wamid=wamid).update(read=True, read_notified=success)
 
     process_whatsapp_state_input.delay(user_num, name, wamid, message)
+
+
+def process_app_button_pressed(
+    user_num: str,
+    name: str,
+    wamid: str,
+    button: Webhook.Entry.Change.Value.Message.Button
+):
+    logger.debug("Processing received button message: user number: %s", user_num)
+
+    match button.payload.lower():
+        case 'stop promotions':
+            Profile.objects.filter(user__phone_number=user_num).update(stop_promotions=True)
+            message = "You have opted out from receiving promotional messages. You will no longer receive such messages."
+            send_app_text.delay(user_num, message, wamid)
+        case _:
+            logger.warn("Unhandled button pressed. Payload: %s", button.payload)

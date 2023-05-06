@@ -15,6 +15,7 @@ class Profile(models.Model):
     notified_low_bal = models.IntegerField(default=0)
     low_bal_last_notified = models.DateTimeField(default=timezone.now)
     last_engagement= models.DateTimeField(default=timezone.now)
+    stop_promotions = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.phone_number
