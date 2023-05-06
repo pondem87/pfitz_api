@@ -53,20 +53,25 @@ class WebhookAPIView(generics.GenericAPIView):
 
             name = getattr(contacts[index].profile, 'name', "")
 
+            text = ""
+
             match message.type:
                 case 'text':
                     process_app_msg(message.wa_from, name, message.id, message.text.body)
+                    text = message.text.body
                 case 'button':
                     process_app_button_pressed(message.wa_from, name, message.id, message.button)
+                    text = message.button.payload
                 case _:
                     # message with unhandled type
                     # print message for debugging
                     logger.warn("Received unhandled message type: %s", message.type)
+                    text = "Unhandled"
                     try:
                         serialized_msg = WebhookMessageSerializer(instance=message)
-                        logger.info("None text message: %s", str(serialized_msg.data))
+                        logger.warn("Unhandled message: %s", str(serialized_msg.data))
                     except Exception as error:
-                        logger.info("Failed to serialize message", str(error))
+                        logger.error("Failed to serialize message object", str(error))
             
 
             ReceivedMessages.objects.create(
@@ -74,8 +79,14 @@ class WebhookAPIView(generics.GenericAPIView):
                 user_number = message.wa_from,
                 user_wa_id = contacts[index].wa_id,
                 message_type = message.type,
-                message_text = getattr(message.text, "body", None)
+                message_text = text
             )
+
+            # send read report
+            success = send_read_report(message.id)
+
+            # mark read in database
+            ReceivedMessages.objects.filter(wamid=message.id).update(read=True, read_notified=success)
 
             index += 1
 
@@ -112,12 +123,6 @@ def process_app_msg(
     message: str
 ):
     logger.debug("Processing received message: user number: %s", user_num)
-
-    # send read report
-    success = send_read_report(wamid)
-
-    # mark read in database
-    ReceivedMessages.objects.filter(wamid=wamid).update(read=True, read_notified=success)
 
     process_whatsapp_state_input.delay(user_num, name, wamid, message)
 
