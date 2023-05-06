@@ -22,6 +22,7 @@ class WebhookAPIView(generics.GenericAPIView):
     def post(self, request):
 
         logger.debug("Received webhook data: %s", str(request.data))
+        logger.info("Received webhook: %s", str(request.data))
         
         serializer = WebhookObjectSerializer(data=request.data)
         if serializer.is_valid():
