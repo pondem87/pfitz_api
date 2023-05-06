@@ -16,7 +16,7 @@ from .util import num_tokens_from_string, subtract_used_tokens, base_chat_prompt
 from django_celery_beat.models import PeriodicTask
 from django.utils import timezone
 from django.db.models import Sum, Q
-from whatsapp.aux_func import send_template
+from whatsapp.tasks import send_app_template
 import datetime
 import json
 import logging
@@ -450,7 +450,7 @@ def notify_low_balance():
             }
         ]
 
-        send_template(my_user_prof.user.phone_number, "low_balance_notification", params=params)
+        send_app_template.delay(my_user_prof.user.phone_number, "low_balance_notification", params=params)
 
         # update database
         my_user_prof.notified_low_bal += 1
@@ -488,7 +488,7 @@ def notify_service_interruption(start, end, date, reason):
             },
         ]
 
-        send_template(my_user_prof.user.phone_number, "service_interruption_notification", params=params)
+        send_app_template.delay(my_user_prof.user.phone_number, "service_interruption_notification", params=params)
 
         # update database
         my_user_prof.notified_low_bal += 1
@@ -577,7 +577,7 @@ def send_promotional_message(template):
     logger.info("Promotional message will be sent to %s clients.", str(len(user_profs)))
 
     for user_prof in user_profs:
-        send_template(user_prof.user__phone_number, template)
+        send_app_template.delay(user_prof.user.phone_number, template)
 
 # Delete expired tasks
 @shared_task
