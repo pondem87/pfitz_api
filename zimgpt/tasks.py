@@ -573,7 +573,12 @@ def send_promotional_message(template):
 
     logger.info("Sending promotional message with template: %s", template)
 
-    send_app_template.delay("26776323310", template)
+    user_profs = Profile.objects.filter(last_engagement__date__lte=datetime.date.today()-datetime.timedelta(days=5))
+
+    logger.info("Promotional message will be sent to %s clients.", str(len(user_profs)))
+
+    for user_prof in user_profs:
+        send_app_template.delay(user_prof.user__phone_number, template)
 
 # Delete expired tasks
 @shared_task
