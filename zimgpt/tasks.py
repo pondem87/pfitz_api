@@ -577,7 +577,7 @@ def send_promotional_message(template):
     logger.info("Promotional message will be sent to %s clients.", str(len(user_profs)))
 
     for user_prof in user_profs:
-        send_app_template.delay(user_prof.user__phone_number, template)
+        send_template(user_prof.user__phone_number, template)
 
 # Delete expired tasks
 @shared_task
