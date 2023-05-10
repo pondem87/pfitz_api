@@ -48,8 +48,9 @@ def initiate_payment(user, product, method, phone_number, email):
         response = paynow.send_mobile(payment, phone_number, method)
 
         if response.success:
-            # Get the link to redirect the user to, then use it as you see fit
-            instructions = response.instruction
+            # Get instructions !!This value may not exist. Another paynow bug
+            default_instructions = "A prompt should appear on your phone to complete the payment. The service provider did not provide more instructions on how to initiate the transaction if there is no prompt."
+            instructions = getattr(response, "instruction", default_instructions)
             # Get the poll url (used to check the status of a transaction). You might want to save this in your DB
             db_payment.poll_url = response.poll_url
             db_payment.save()
