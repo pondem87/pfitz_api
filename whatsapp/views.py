@@ -68,10 +68,10 @@ class WebhookAPIView(generics.GenericAPIView):
                     logger.warn("Received unhandled message type: %s", message.type)
                     text = "Unhandled"
                     try:
-                        serialized_msg = WebhookMessageSerializer(instance=message)
+                        serialized_msg = WebhookMessageSerializer(message)
                         logger.warn("Unhandled message: %s", str(serialized_msg.data))
                     except Exception as error:
-                        logger.error("Failed to serialize message object", str(error))
+                        logger.error("Failed to serialize message object: %s", str(error))
             
 
             ReceivedMessages.objects.create(
