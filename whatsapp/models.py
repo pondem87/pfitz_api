@@ -152,7 +152,7 @@ class Webhook:
                                  order=None, referral=None, sticker=None, system=None, text=None,
                                  timestamp=None, video=None):
                         self.id = id
-                        self.wa_from = wa_from
+                        setattr(self, "from", wa_from)
                         self.type = type
                         self.audio = audio
                         self.button = button
@@ -184,7 +184,7 @@ class Webhook:
                         def __init__(self, forwarded=None, frequently_forwarded=None, wa_from=None, id=None, referred_product=None):
                             self.forwarded = forwarded
                             self.frequently_forwarded = frequently_forwarded
-                            self.wa_from = wa_from
+                            setattr(self, "from", wa_from)
                             self.id = id
                             self.referred_product = referred_product
 

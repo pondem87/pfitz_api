@@ -57,10 +57,10 @@ class WebhookAPIView(generics.GenericAPIView):
 
             match message.type:
                 case 'text':
-                    process_app_msg(message.wa_from, name, message.id, message.text.body)
+                    process_app_msg(getattr(message, "from", None), name, message.id, message.text.body)
                     text = message.text.body
                 case 'button':
-                    process_app_button_pressed(message.wa_from, name, message.id, message.button)
+                    process_app_button_pressed(getattr(message, "from", None), name, message.id, message.button)
                     text = message.button.payload
                 case _:
                     # message with unhandled type
@@ -76,7 +76,7 @@ class WebhookAPIView(generics.GenericAPIView):
 
             ReceivedMessages.objects.create(
                 wamid = message.id,
-                user_number = message.wa_from,
+                user_number = getattr(message, "from", None),
                 user_wa_id = contacts[index].wa_id,
                 message_type = message.type,
                 message_text = text
