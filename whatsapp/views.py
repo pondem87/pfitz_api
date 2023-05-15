@@ -101,7 +101,7 @@ class WebhookAPIView(generics.GenericAPIView):
         
         mode = request.query_params.get("hub.mode", None)
         token = request.query_params.get("hub.verify_token", None)
-        challenge = int(request.query_params.get("hub.challenge", None))
+        challenge = int(request.query_params.get("hub.challenge", "0"))
 
         if mode and token:
             if mode == "subscribe" and token == verify_token:
