@@ -491,7 +491,7 @@ class WebhookTextSerializer(serializers.Serializer):
 
 class WebhookMessageSerializer(serializers.Serializer):
     id = serializers.CharField()
-    vars()["from"] = serializers.CharField()
+    vars()["from"] = serializers.CharField(source="wa_from")
     type = serializers.CharField()
     timestamp = serializers.CharField()
     audio = WebhookAudioSerializer(required=False)
