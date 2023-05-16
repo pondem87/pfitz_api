@@ -76,12 +76,14 @@ def initiate_payment(user, product, method, phone_number, email):
 
         else:
             # failed request
-            logger.error("Paynow error: %s", str(response))
+            error_msg = getattr(response, "error", "Paynow transaction request failed.")
+
+            logger.error("Paynow error: %s", str(error_msg))
 
             db_payment.status = Payment.STATUS_REJECTED
             db_payment.save()
 
-            return (response.error, status.HTTP_400_BAD_REQUEST)
+            return (error_msg, status.HTTP_400_BAD_REQUEST)
         
     except Exception as error:
         # lets reject the transaction and log the exception
