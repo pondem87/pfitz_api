@@ -2,6 +2,8 @@ from typing import Any, Dict
 from django.contrib.auth import get_user_model
 from django.views.generic import TemplateView, ListView, UpdateView
 from .forms import UpdateUserForm, UserFormset, UpdatePaymentForm
+from django.utils.decorators import method_decorator
+from django.contrib.admin.views.decorators import staff_member_required
 from zimgpt.models import DailyMetrics, Profile
 from .serializers import DailyMetricsSerializer
 from django.db.models import Q
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)
 staff_login_url = "/admin/login/"
 
 # Create your views here.
+@method_decorator(staff_member_required, name="dispatch")
 class DashboardView(PermissionRequiredMixin, TemplateView):
 
     permission_required = 'zimgpt.view_dailymetrics'
@@ -67,6 +70,7 @@ class DashboardView(PermissionRequiredMixin, TemplateView):
         return context
 
 
+@method_decorator(staff_member_required, name="dispatch")
 class UsersView(PermissionRequiredMixin, ListView):
 
     permission_required = 'zimgpt.view_profile'
@@ -92,6 +96,8 @@ class UsersView(PermissionRequiredMixin, ListView):
         else:
             return super().get_queryset()
 
+
+@method_decorator(staff_member_required, name="dispatch")
 class UserUpdateView(PermissionRequiredMixin ,UpdateView):
 
     permission_required = ('zimgpt.change_profile', 'user_accounts.change_pfitzuser')
@@ -141,7 +147,7 @@ class UserUpdateView(PermissionRequiredMixin ,UpdateView):
         return super().form_valid(form)
 
 
-
+@method_decorator(staff_member_required, name="dispatch")
 class PaymentsView(PermissionRequiredMixin, ListView):
 
     permission_required = 'payments.view_payment'
@@ -168,6 +174,7 @@ class PaymentsView(PermissionRequiredMixin, ListView):
         return context
     
 
+@method_decorator(staff_member_required, name="dispatch")
 class PaymentUpdateView(PermissionRequiredMixin, UpdateView):
 
     permission_required = 'payments.change_payment'
