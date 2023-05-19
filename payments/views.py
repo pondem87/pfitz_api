@@ -38,6 +38,7 @@ class UpdatePaymentAPIView(generics.GenericAPIView):
             # check payment
             check_payment_status(payment)
 
+            return Response(None, status=status.HTTP_200_OK)
             
         else:
             logger.error("Payment update from API failed.")
