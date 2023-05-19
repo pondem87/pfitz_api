@@ -35,38 +35,8 @@ class UpdatePaymentAPIView(generics.GenericAPIView):
             payment: Payment = get_object_or_404(Payment, uuid=response.reference)
             
 
-            if response.paid:
-                
-                payment.status = Payment.STATUS_PAID
-
-            elif response.status.lower().strip() == "created":
-
-                payment.status = Payment.STATUS_INITIATED
-
-            elif response.status.lower().strip() == "sent":
-
-                payment.status = Payment.STATUS_PENDING
-
-            elif response.status.lower().strip() == "cancelled":
-
-                payment.status = Payment.STATUS_CANCELLED
-
-            elif response.status.lower().strip() == "refunded":
-
-                payment.status = Payment.STATUS_REFUNDED
-            
-            elif response.status.lower().strip() == "delivered" or response.status.lower().strip() == "awaiting delivery":
-                
-                payment.status = Payment.STATUS_APPROVED
-            
-            else:
-
-                payment.status = Payment.STATUS_PENDING
-
-            payment.external_ref = response.paynow_reference
-            payment.save()
-
-            return Response(None, status=status.HTTP_200_OK)
+            # check payment
+            check_payment_status(payment)
 
             
         else:
