@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Group, Permission
 from django.utils import timezone
 import logging
 
@@ -51,6 +51,9 @@ class PfitzUser(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "phone_number"
     REQUIRED_FIELDS = []
+
+    groups = models.ManyToManyField(Group, blank=True, related_name="user_set", related_query_name="user")
+    user_permissions = models.ManyToManyField(Permission, blank=True, related_name="user_set", related_query_name="user")
 
     objects = PfitzUserManager()
 

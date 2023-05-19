@@ -1,0 +1,77 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="row py-3">
+    <h1>ZimGPT Payments Dashboard</h1>
+</div>
+<div class="row">
+    <div class="col-6 offset-4">
+        <form method="get" action="{% url 'dashboard.payments' %}">
+            <div class="input-group">
+                <span class="input-group-text">Phone number:</span>
+                <input type="text" aria-label="phone number" name="phone_number" {% if phone_number %}value="{{phone_number}}"{% endif %} class="form-control">
+                <button class="btn btn-primary" type="submit" id="submit">Search</button>
+            </div>
+        </form>
+    </div>    
+</div>
+<div class="row py-4">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th scope="col">Date/Time</th>
+                <th scope="col">User</th>
+                <th scope="col">Method</th>
+                <th scope="col">Wallet Number</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Status</th>
+                <th scope="col">Tokens</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+                <tr>
+                    <th scope="row">{{payment.created}}</th>
+                    <td>{{payment.user}}</td>
+                    <td>{{payment.method}}</td>
+                    <td>{{payment.mobile_wallet_number}}</td>
+                    <td>{{payment.amount}}</td>
+                    <td>{{payment.status}}</td>
+                    <td>{{payment.product.units_offered}}</td>
+                    <td><a href="{% url 'dashboard.payment' pk=payment.id %}">Edit</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="row py-3">
+    <nav aria-label="...">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if phone_number %}&phone_number={{phone_number}}{% endif %}">First</a>
+            </li>
+            <li class="page-item"><a class="page-link" href="?page={{page_obj.previous_page_number}}{% if phone_number %}&phone_number={{phone_number}}{% endif %}">Previous</a></li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">First</span>
+            </li>
+            {% endif %}
+            <li class="page-item active" aria-current="page">
+                <span class="page-link">Page {{page_obj.number}} of {{page_obj.paginator.num_pages}}</span>
+            </li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{page_obj.next_page_number}}{% if phone_number %}&phone_number={{phone_number}}{% endif %}">Next</a></li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{page_obj.paginator.num_pages}}{% if phone_number %}&phone_number={{phone_number}}{% endif %}">Last</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock content %}

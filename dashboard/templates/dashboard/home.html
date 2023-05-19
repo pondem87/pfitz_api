@@ -1,0 +1,189 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div>
+    <div class="float-end">
+        <h2>Current Users: {{live_user_total}}</h2>
+    </div>
+    <div>
+        <h1>My Dashboard</h1>
+        <p>Welcome to ZimGPT dashboard</p>
+    </div>
+</div>
+
+<div class="">
+    <div class="row py-4">
+        <div class="col-xl-6">
+            <h3>Daily Active Users</h3>
+            <p>Number of users who interacted with the service within a 24 hour period</p>
+            <canvas id="daily-active-users"></canvas>
+        </div>
+        <div class="col-xl-6">
+            <h3>Daily Token Usage</h3>
+            <p>Total number of tokens consumed by all users within a 24 hour period</p>
+            <canvas id="daily-token-usage"></canvas>
+        </div>
+    </div>
+    <div class="row py-4">
+        <div class="col-xl-6">
+            <h3>Daily New Users</h3>
+            <p>Number of users who registered for the service within a 24 hour period</p>
+            <canvas id="daily-new-users"></canvas>
+        </div>
+        <div class="col-xl-6">
+            <h3>Daily Cumulative User Count</h3>
+            <p>Total number of users at the end of each day</p>
+            <canvas id="daily-total-users"></canvas>
+        </div>
+    </div>
+    <div class="row py-4">
+        <h3>Other Metrics</h3>
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Daily Token Purchases</th>
+                    <th scope="col">Daily Token Revenue</th>
+                    <th scope="col">Daily API Requests</th>
+                    <th scope="col">Daily Token Usage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for metric in metrics_py %}
+                <tr>
+                    <th scope="row">{{metric.date}}</th>
+                    <td>{{metric.daily_token_purchases}}</td>
+                    <td>{{metric.daily_token_purchase_amount}}</td>
+                    <td>{{metric.daily_api_requests}}</td>
+                    <td>{{metric.daily_token_usage}}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <th scope="row">Total</th>
+                    <td>
+                        {{total_daily_token_purchases}}
+                    </td>
+                    <td>
+                        {{total_daily_token_purchase_amount}}
+                    </td>
+                    <td>
+                        {{total_daily_api_requests}}
+                    </td>
+                    <td>
+                        {{total_daily_token_usage}}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="row py-4">
+        <h2>Choose a custom range for your metrics</h2>
+        <div class="col-lg-6 py-4">
+            <form method="get" action="{% url 'dashboard.home' %}">
+                <input id="start-date" type="hidden" name="from" />
+                <input id="end-date" type="hidden" name="to" />
+                <div class="input-group">
+                    <span class="input-group-text">Start - End</span>
+                    <input id="litepicker" type="text" aria-label="Date Range" class="form-control">
+                    <button class="btn btn-secondary" type="submit" id="submit-dates-button">Apply</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-lg-6">
+            <p class="py-4">Select a start and end date for your metrics</p>
+        </div>
+
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.umd.min.js"
+    integrity="sha512-TJ7U6JRJx5IpyvvO9atNnBzwJIoZDaQnQhb0Wmw32Rj5BQHAmJG16WzaJbDns2Wk5VG6gMt4MytZApZG47rCdg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+
+<script>
+    var metrics = JSON.parse('{{metrics | safe}}')
+
+    // console.log(metrics)
+
+    const daily_active_users = document.getElementById('daily-active-users');
+
+    new Chart(daily_active_users, {
+        type: 'line',
+        data: {
+            labels: metrics.map((metric) => metric.date),
+            datasets: [{
+                label: 'Daily Active Users',
+                data: metrics.map((metric) => metric.daily_active_users),
+                borderWidth: 1
+            }]
+        },
+        options: {}
+    });
+
+    const daily_token_usage = document.getElementById('daily-token-usage');
+
+    new Chart(daily_token_usage, {
+        type: 'line',
+        data: {
+            labels: metrics.map((metric) => metric.date),
+            datasets: [{
+                label: 'Daily Token Usage',
+                data: metrics.map((metric) => metric.daily_token_usage),
+                borderWidth: 1
+            }]
+        },
+        options: {}
+    });
+
+    const daily_new_users = document.getElementById('daily-new-users');
+
+    new Chart(daily_new_users, {
+        type: 'line',
+        data: {
+            labels: metrics.map((metric) => metric.date),
+            datasets: [{
+                label: 'Daily New Users',
+                data: metrics.map((metric) => metric.daily_new_users),
+                borderWidth: 1
+            }]
+        },
+        options: {}
+    });
+
+    const daily_total_users = document.getElementById('daily-total-users');
+
+    new Chart(daily_total_users, {
+        type: 'line',
+        data: {
+            labels: metrics.map((metric) => metric.date),
+            datasets: [{
+                label: 'Daily Cumulative Users',
+                data: metrics.map((metric) => metric.total_users),
+                borderWidth: 1
+            }]
+        },
+        options: {}
+    });
+
+    const picker = new Litepicker({
+        element: document.getElementById('litepicker'),
+        singleMode: false,
+    });
+
+    picker.on('selected', (date1, date2) => {
+        let start = date1.toJSDate().toISOString().substr(0,10)
+        let end = date2.toJSDate().toISOString().substr(0,10)
+        console.log(`Dates selected: ${start} - ${end}`)
+
+        document.getElementById('start-date').value = start
+        document.getElementById('end-date').value = end
+    })
+
+</script>
+
+{% endblock scripts %}

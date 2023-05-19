@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'user_accounts',
     'zimgpt',
     'payments',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -210,6 +211,7 @@ REST_KNOX = {
   'AUTO_REFRESH': False,
 }
 
+
 # setup logging
 loggly_token = config("LOGGLY_TOKEN")
 loggly_tag = config("LOGGLY_TAG")
@@ -254,7 +256,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'loggly', 'file'],
             'level': 'INFO',
         },
         'zimgpt': {
@@ -274,6 +276,10 @@ LOGGING = {
             'level': log_level,
         },
         'pfitz_api': {
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
+        },
+        'dashboard': {
             'handlers': ['console', 'loggly', 'file'],
             'level': log_level,
         }

@@ -1,0 +1,86 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="row py-3">
+    <div class="col-lg-8 offset-lg-2">
+        <h1>ZimGPT Payment Update Panel</h1>
+        <h3>Updating payment: {{uuid}}</h3>
+        <p class="lead">USER<br />Phone: {{phone_number}}<br />Name: {{name}}<br />UUID reference: {{ref}}</p>
+        <p>Payment made on {{created}} and last updated on {{updated}}</p>
+        <p>URL to check payment from Paynow: {{poll_url}}</p>
+        <p>Mobile Wallet Number: <strong>{{mobile_wallet_number}}</strong> via <strong>{{method}}</strong></p>
+    </div>
+</div>
+<div class="row py-4">
+    <div class="col-lg-6 offset-lg-3">
+        <form method="post">
+            {% csrf_token %}
+            <h3>Payment Update</h3>
+            <div class="p-3">
+                {{form.as_p}}
+            </div>
+            <input type="hidden" value="{{next}}" name="next" />
+            <p class="text-danger">** A change of payment status to approved or paid will trigger addition of tokens to
+                client. Changing back status to not paid or equivalent will not subtract tokens.</p>
+            <button type="submit" value="Save" class="btn btn-primary m-3">Update</button>
+            <a href="{{next}}"><button value="Cancel" class="btn btn-danger m-3">Cancel</button></a>
+        </form>
+    </div>
+</div>
+<div class="row py-4">
+    <div class="col-lg-8 offset-lg-2">
+        <h4>Initiate payment update from server</h4>
+        <p>This will trigger a server function that checks Paynow payment status and triggers user notifications as well
+        </p>
+        <div class="p-3">
+            <button id="trigger-update" value="Init" class="btn btn-success m-3 float-end">Initiate</button>
+            <p id="query-result" class="p-4"></p>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    window.onload = (event) => {
+        var responseParagraph = document.getElementById('query-result');
+        var button = document.getElementById('trigger-update')
+        
+        button.addEventListener("click", function () {
+
+            button.disabled = true
+            responseParagraph.textContent = "Posting request to: https://api.pfitz.co.zw/payment/status/"
+
+            // Create a new XMLHttpRequest object
+            var xhr = new XMLHttpRequest();
+
+            // Set up the request
+            xhr.open('POST', '/payment/status/', true);
+            xhr.setRequestHeader('Content-type', 'application/json');
+
+            // Set up the callback function for when the request is complete
+            xhr.onload = function () {
+
+                button.disabled = false
+
+                if (xhr.status === 200) {
+                    // Request was successful, update the paragraph with the response
+                    responseParagraph.textContent = "Update successful. Refresh page to see changes."
+                } else {
+                    // Request failed, display an error message
+                    responseParagraph.textContent = 'Error: ' + xhr.status;
+                }
+            };
+
+            // Get the data from your form or create an object to send
+            var data = { pollurl: '{{poll_url}}' };
+
+            // Convert the data to JSON format
+            var jsonData = JSON.stringify(data);
+
+            // Send the request
+            xhr.send(jsonData);
+        })
+    }
+</script>
+{% endblock scripts %}
