@@ -24,6 +24,7 @@ staff_login_url = "/admin/login/"
 class DashboardView(PermissionRequiredMixin, TemplateView):
 
     permission_required = 'zimgpt.view_dailymetrics'
+
     login_url = staff_login_url
 
     template_name = "dashboard/home.html"
@@ -73,7 +74,8 @@ class DashboardView(PermissionRequiredMixin, TemplateView):
 @method_decorator(staff_member_required, name="dispatch")
 class UsersView(PermissionRequiredMixin, ListView):
 
-    permission_required = 'zimgpt.view_profile'
+    permission_required = ('zimgpt.view_profile', 'user_accounts.view_pfitzuser')
+
     login_url = staff_login_url
 
     model = Profile
@@ -101,6 +103,7 @@ class UsersView(PermissionRequiredMixin, ListView):
 class UserUpdateView(PermissionRequiredMixin ,UpdateView):
 
     permission_required = ('zimgpt.change_profile', 'user_accounts.change_pfitzuser')
+
     login_url = staff_login_url    
 
     model = get_user_model()
@@ -151,6 +154,7 @@ class UserUpdateView(PermissionRequiredMixin ,UpdateView):
 class PaymentsView(PermissionRequiredMixin, ListView):
 
     permission_required = 'payments.view_payment'
+
     login_url = staff_login_url
 
     model = Payment
@@ -178,6 +182,7 @@ class PaymentsView(PermissionRequiredMixin, ListView):
 class PaymentUpdateView(PermissionRequiredMixin, UpdateView):
 
     permission_required = 'payments.change_payment'
+
     login_url = staff_login_url
 
     model = Payment
