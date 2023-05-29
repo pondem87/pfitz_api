@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
 
+    multi_instance = config("CELERY_BEAT_MULTI_INSTANCE", cast=bool, default=False)
+
     def initLockConnection(self):
 
         try:
@@ -76,35 +78,40 @@ class PfitzRabbitMQLockedScheduler(DatabaseScheduler):
 
     def tick(self, *args, **kwargs):
 
-        if not hasattr(self, 'lock_tick_counter'):
-            self.lock_tick_counter = 0
-            self.lock_check_tick_interval = config("PFITZ_SCHEDULER_LOCK_CHECK_INTERVAL", cast=int, default=5)
-            self.can_tick = False
-        elif self.lock_tick_counter < self.lock_check_tick_interval:
-            self.lock_tick_counter += 1
-        else:
-            self.lock_tick_counter = 0
+        if PfitzRabbitMQLockedScheduler.multi_instance:
 
-            if not hasattr(self, 'lock_connection'):
-                self.lock_queue_name = 'pfitz-celerybeat-lock'
-                if self.initLockConnection():
+            if not hasattr(self, 'lock_tick_counter'):
+                self.lock_tick_counter = 0
+                self.lock_check_tick_interval = config("PFITZ_SCHEDULER_LOCK_CHECK_INTERVAL", cast=int, default=5)
+                self.can_tick = False
+            elif self.lock_tick_counter < self.lock_check_tick_interval:
+                self.lock_tick_counter += 1
+            else:
+                self.lock_tick_counter = 0
+
+                if not hasattr(self, 'lock_connection'):
+                    self.lock_queue_name = 'pfitz-celerybeat-lock'
+                    if self.initLockConnection():
+                        self.initLockQueue()
+
+                else:
                     self.initLockQueue()
 
-            else:
-                self.initLockQueue()
-
-            if self.hasLock():
-                logger.debug("Lock obtained, can now tick")
-                self.can_tick = True
-            else:
-                logger.debug("Lock unavailable, stop ticking")
-                self.can_tick = False
+                if self.hasLock():
+                    logger.debug("Lock obtained, can now tick")
+                    self.can_tick = True
+                else:
+                    logger.debug("Lock unavailable, stop ticking")
+                    self.can_tick = False
 
 
-        if self.can_tick:
-            logger.debug("SCHEDULER TICKING")
-            super().tick(*args, **kwargs)
+            if self.can_tick:
+                logger.debug("MULTI SCHEDULER TICKING")
+                super().tick(*args, **kwargs)
         
+        else:
+            logger.debug("SINGLE SCHEDULER TICKING")
+            super().tick(*args, **kwargs)
     
     def __del__(self):
         try:

@@ -85,7 +85,7 @@ class WAChatState:
     _menu_text = "\n\nReply with\n\n *1*: _for_ Chat (chat with AI)\n *2*: _for_ Free Prompt (send custom prompts to AI)" + \
         "\n *3*: _to_ View And Buy Tokens\n *4*: _to_ View Payments\n *5*: _to_ Get Free Tokens \n\nFor help, whatsapp 263775409679. For more functions: https://zimgpt.pfitz.co.zw/"
     _menu_vars = ['1', '2', '3', '4', '5']
-    _reset_codes = ["*#exit", "*#menu"]
+    _reset_codes = ["*#exit", "*#menu", "#exit", "#menu"]
     _reset_code = "*#exit or *#menu"
 
     class Data:
