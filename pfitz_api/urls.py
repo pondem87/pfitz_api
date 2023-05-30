@@ -32,4 +32,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('alive/', HealthCheckView.as_view()),
     path('dashboard/', include('dashboard.urls')),
+    path('whatsapp/', include('whatsapp.urls')),
 ]
