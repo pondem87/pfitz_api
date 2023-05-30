@@ -6,7 +6,7 @@ from .serializers import WebhookObjectSerializer, WebhookMessageSerializer
 from .models import SentMessages, ReceivedMessages, Webhook
 from decouple import config
 from zimgpt.tasks import process_whatsapp_state_input
-from .aux_func import send_read_report
+from .aux_func import send_read_report, send_text
 from .tasks import send_app_text
 from zimgpt.models import Profile
 import logging
@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 verify_token = config('WA_WEBHOOK_VERIFY_TOKEN')
 this_apps_number = config('WHATSAPP_NUMBER_ID')
+offline = config("OFFLINE", cast=bool, default=True)
 
 # Create your views here.
 class WebhookAPIView(generics.GenericAPIView):
@@ -50,6 +51,14 @@ class WebhookAPIView(generics.GenericAPIView):
         index = 0
 
         for message in messages:
+
+            if offline:
+                #send offline info
+                send_text(getattr(message, "from", None),
+                          "Sorry... Maintainance in progress. Service will resume in 1 or 2 hours.",
+                          message.id)
+
+                return
 
             name = getattr(contacts[index].profile, 'name', "")
 
