@@ -55,8 +55,7 @@ class WebhookAPIView(generics.GenericAPIView):
             if offline:
                 #send offline info
                 send_text(getattr(message, "from", None),
-                          "Sorry... Maintainance in progress. Service will resume in 1 or 2 hours.",
-                          message.id)
+                          "Sorry... Maintainance in progress. Service will resume in 1 or 2 hours.")
 
                 return
 
