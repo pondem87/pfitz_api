@@ -48,6 +48,9 @@ def send_template(dest, template, params=None, lang=wa_temp_lang):
 
 def send_text(dest, message, reply_to_wamid=None, conv_id=None):
 
+    # breaking change by whatsapp means I cannot reply to a message
+    reply_to_wamid = None
+
     # create text obj
     text = Message.Text(body=message)
 
