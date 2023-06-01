@@ -182,6 +182,8 @@ from .cdn_config import (
     AWS_S3_SECRET_ACCESS_KEY,
     AWS_STORAGE_BUCKET_NAME,
     AWS_S3_ENDPOINT_URL,
+    AWS_S3_OBJECT_PARAMETERS,
+    AWS_S3_REGION_NAME
 )
 
 # Default primary key field type
