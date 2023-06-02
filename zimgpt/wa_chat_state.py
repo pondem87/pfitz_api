@@ -82,7 +82,7 @@ class WAChatState:
     _CONFIRM_PAYMENT_DETAILS = "CONFIRM_PAYMENT_DETAILS"
     _CHECK_PAYMENT = "CHECK_PAYMENT"
 
-    _menu_text = "\n\nReply with\n\n *1*: _for_ Chat (chat with AI)\n *2*: _for_ Free Prompt (send custom prompts to AI)" + \
+    _menu_text = "\n\nReply with\n\n *1*: _for_ Chat (Conversation style AI)\n *2*: _for_ Q and A (No conversation memory but uses less tokens)" + \
         "\n *3*: _to_ View And Buy Tokens\n *4*: _to_ View Payments\n *5*: _to_ Get Free Tokens \n\nFor help, whatsapp 263775409679. For more functions: https://zimgpt.pfitz.co.zw/"
     _menu_vars = ['1', '2', '3', '4', '5']
     _reset_codes = ["*#exit", "*#menu", "#exit", "#menu"]
@@ -217,7 +217,7 @@ class WAChatState:
                             self.state = WAChatState._CHAT
                         case 2:
                             # selected free response
-                            message = "Free prompt mode. Sending {code} will send you back to main menu.\n\nYou can enter any text for text-completion by the AI model. ({model})".format(code=WAChatState._reset_code, model=model)
+                            message = "You are in Q and A mode. Sending {code} will send you back to main menu.\n\nGive clear instructions and/or a question for the AI to generate the best response. (AI model: {model})".format(code=WAChatState._reset_code, model=model)
                             send_text(self.user_num, message, wamid)
                             self.data = None
                             self.state = WAChatState._FREE_PROMPT
