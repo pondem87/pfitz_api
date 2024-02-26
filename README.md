@@ -9,7 +9,7 @@ The interaction with the AI is in two forms. The first is in chat form with conv
 Users are required to create an account and then purchase tokens using a mobile money wallet from Zimbabwe. This can be done either through whatsapp or via the web application.
 The web application and whatsapp chatbot allow realtime purchase of tokens.
 
-### Implementation
+## Implementation
 This is the backend for the next-js and whatsapp app ZimGPT
 It interacts with a postgres database which stores all the user information, interacts with the open ai server as well as whatsapp endpoints.
 Celery is used to queue up tasks with rabbitmq and subsequently process the task asynchronously and send back a response.
