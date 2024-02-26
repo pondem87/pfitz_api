@@ -8,27 +8,33 @@ logger = logging.getLogger(__name__)
 
 wa_temp_lang = config('WA_TEMPLATE_DEFAULT_LANG')
 
-debug = config('DEBUG', default=True, cast=bool)
-whatsapp_num_id = config('WHATSAPP_TEST_NUMBER_ID') if debug else config('WHATSAPP_NUMBER_ID')
-whatapp_bus_id = config('WHATSAPP_TEST_BUSINESS_ID') if debug else config('WHATSAPP_BUSINESS_ID')
+whatsapp_num_id = config('WHATSAPP_NUMBER_ID')
+whatapp_bus_id = config('WHATSAPP_BUSINESS_ID')
 whatsapp_access_token = config('WHATSAPP_ACCESS_TOKEN')
 messages_url = "https://graph.facebook.com/v16.0/{num_id}/messages".format(num_id=whatsapp_num_id)
 auth_header = "Bearer " + whatsapp_access_token
 
-def send_template(dest, template, params, lang=wa_temp_lang):
+def send_template(dest, template, params=None, lang=wa_temp_lang):
 
     logger.debug("Running send_template")
 
-    # create parameters array of objects
+    # create parameters array of objects if params not None
     parameters = []
-    for param in params:
-        parameters.append(Message.Template.Component.Parameter(**param))
+    if params is not None:
+        for param in params:
+            parameters.append(Message.Template.Component.Parameter(**param))
+    else:
+        parameters = None
     
     # create template languge object
     language = Message.Template.Language(code=lang)
 
     # place parameters into template component
-    components = [Message.Template.Component(parameters=parameters),]
+    # components can be set to None if there is no component
+    if parameters is not None:
+        components = [Message.Template.Component(parameters=parameters),]
+    else:
+        components = None
 
     # create template object
     template = Message.Template(name=template, language=language, components=components)
@@ -41,6 +47,9 @@ def send_template(dest, template, params, lang=wa_temp_lang):
 
 
 def send_text(dest, message, reply_to_wamid=None, conv_id=None):
+
+    # breaking change by whatsapp means I cannot reply to a message
+    reply_to_wamid = None
 
     # create text obj
     text = Message.Text(body=message)
@@ -69,14 +78,25 @@ def send_read_report(wamid):
         "authorization": auth_header,
     }
 
-    response = requests.post(messages_url, headers=headers, json=payload)
+    try:
+        response = requests.post(messages_url, headers=headers, json=payload)
 
-    logger.debug("Read report response: %s", response.json())
+        logger.info("Read report response: %s", str(response.json()))
+        
+        success = response.json()["success"] if response.status_code == 200 else False
 
-    if response.json()["success"]:
-        logger.info("Updated 'read' status for wamid: %s", wamid)
-    else:
-        logger.error("Failed status update for wamid: %s", wamid)
+        if success:
+            logger.info("Updated 'read' status for wamid: %s", wamid)
+        else:
+            logger.error("Failed status update for wamid: %s", wamid)
+
+        return success
+    
+    except Exception as err:
+
+        logger.error("Error when sending read notification: %s", str(err))
+        return False
+
 
 
 # send prepared message to messages endpoint

@@ -1,16 +1,21 @@
 from django.shortcuts import render
+from typing import List
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import WebhookObjectSerializer
-from .models import SentMessages, ReceivedMessages
+from .serializers import WebhookObjectSerializer, WebhookMessageSerializer
+from .models import SentMessages, ReceivedMessages, Webhook
 from decouple import config
 from zimgpt.tasks import process_whatsapp_state_input
-from whatsapp.aux_func import send_read_report
+from .aux_func import send_read_report, send_text
+from .tasks import send_app_text
+from zimgpt.models import Profile
 import logging
 
 logger = logging.getLogger(__name__)
 
 verify_token = config('WA_WEBHOOK_VERIFY_TOKEN')
+this_apps_number = config('WHATSAPP_NUMBER_ID')
+offline = config("OFFLINE", cast=bool, default=True)
 
 # Create your views here.
 class WebhookAPIView(generics.GenericAPIView):
@@ -23,43 +28,73 @@ class WebhookAPIView(generics.GenericAPIView):
         serializer = WebhookObjectSerializer(data=request.data)
         if serializer.is_valid():
             webhook = serializer.save()
-            
-            if webhook.entry[0].changes[0].value.messages:
-                self.on_message_received(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.contacts, webhook.entry[0].changes[0].value.messages)
-            elif webhook.entry[0].changes[0].value.statuses:
-                self.on_status_update(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.statuses)
+
+            # check if we are responding
+            # we only respond to messages from our phone
+            if webhook.entry[0].changes[0].value.metadata.phone_number_id == this_apps_number:
+                if webhook.entry[0].changes[0].value.messages:
+                    self.on_message_received(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.contacts, webhook.entry[0].changes[0].value.messages)
+                elif webhook.entry[0].changes[0].value.statuses:
+                    self.on_status_update(request, webhook.entry[0].id, webhook.entry[0].changes[0].value.metadata, webhook.entry[0].changes[0].value.statuses)
 
             return Response(None, status=status.HTTP_200_OK)
         else:
             #parsing failed
-            logger.error("Serialising webhook failed: %s", str(serializer.errors))
+            logger.error("Serialising webhook Errors: %s; RequestData: %s", str(serializer.errors), str(request.data))
             return Response(None, status=status.HTTP_404_NOT_FOUND)
         
     ## webhook events
-    def on_message_received(self, request, account_id, metadata, contacts, messages):
+    def on_message_received(self, request, account_id, metadata, contacts, messages: List[Webhook.Entry.Change.Value.Message]):
         logger.debug("Messages received")
 
         #index to iterate contacts
         index = 0
 
         for message in messages:
-            message_text = ''
-            if message.text:
-                message_text = message.text.body
-            else:
-                message_text = "No text available"
 
-            ReceivedMessages.objects.create(
-                wamid = message.id,
-                user_number = message.wa_from,
-                user_wa_id = contacts[index].wa_id,
-                message_type = message.type,
-                message_text = message_text
-            )
+            if offline:
+                #send offline info
+                send_text(getattr(message, "from", None),
+                          "Sorry... Maintainance in progress. Service will resume in 1 or 2 hours.")
+
+                return
 
             name = getattr(contacts[index].profile, 'name', "")
 
-            process_app_msg(message.wa_from, name, message.id, message_text)
+            text = ""
+
+            match message.type:
+                case 'text':
+                    process_app_msg(getattr(message, "from", None), name, message.id, message.text.body)
+                    text = message.text.body
+                case 'button':
+                    process_app_button_pressed(getattr(message, "from", None), name, message.id, message.button)
+                    text = message.button.payload
+                case _:
+                    # message with unhandled type
+                    # print message for debugging
+                    logger.warn("Received unhandled message type: %s", message.type)
+                    text = "Unhandled"
+                    try:
+                        serialized_msg = WebhookMessageSerializer(message)
+                        logger.warn("Unhandled message: %s", str(serialized_msg.data))
+                    except Exception as error:
+                        logger.error("Failed to serialize message object: %s", str(error))
+            
+
+            ReceivedMessages.objects.create(
+                wamid = message.id,
+                user_number = getattr(message, "from", None),
+                user_wa_id = contacts[index].wa_id,
+                message_type = message.type,
+                message_text = text
+            )
+
+            # send read report
+            success = send_read_report(message.id)
+
+            # mark read in database
+            ReceivedMessages.objects.filter(wamid=message.id).update(read=True, read_notified=success)
 
             index += 1
 
@@ -74,7 +109,7 @@ class WebhookAPIView(generics.GenericAPIView):
         
         mode = request.query_params.get("hub.mode", None)
         token = request.query_params.get("hub.verify_token", None)
-        challenge = int(request.query_params.get("hub.challenge", None))
+        challenge = int(request.query_params.get("hub.challenge", "0"))
 
         if mode and token:
             if mode == "subscribe" and token == verify_token:
@@ -97,7 +132,21 @@ def process_app_msg(
 ):
     logger.debug("Processing received message: user number: %s", user_num)
 
-        # send read report
-    send_read_report(wamid)
-
     process_whatsapp_state_input.delay(user_num, name, wamid, message)
+
+
+def process_app_button_pressed(
+    user_num: str,
+    name: str,
+    wamid: str,
+    button: Webhook.Entry.Change.Value.Message.Button
+):
+    logger.debug("Processing received button message: user number: %s", user_num)
+
+    match button.payload.lower():
+        case 'stop promotions':
+            Profile.objects.filter(user__phone_number=user_num).update(stop_promotions=True)
+            message = "You have opted out from receiving promotional messages. You will no longer receive such messages."
+            send_app_text.delay(user_num, message, wamid)
+        case _:
+            logger.warn("Unhandled button pressed. Payload: %s", button.payload)

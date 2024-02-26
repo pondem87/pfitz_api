@@ -1,5 +1,4 @@
 from whatsapp.aux_func import send_text
-from django.contrib.auth import get_user_model
 from decouple import config
 from .aux_func import get_chat_completion, get_completion, process_ref_code
 from rest_framework import serializers, status
@@ -17,6 +16,7 @@ logger = logging.getLogger(__name__)
 model = config('OPENAI_COMPLETION_MODEL')
 currency = config('BASE_CURRENCY')
 chat_expiration_time = config('CHAT_EXPIRATION_TIME', cast=int)
+referral_tokens = config('REFERRAL_REWARD_TOKENS', cast=int)
 
 ## ChatState serializer
 
@@ -41,7 +41,7 @@ class WAChatStateDataSerializer(serializers.Serializer):
         if product_list_data:
             product_list = []
             for product_data in product_list_data:
-                product = WAChatStateDataProductSerializer(**product_data)
+                product = WAChatStateDataProductSerializer(data=product_data)
                 product.is_valid(raise_exception=True)
                 product_list.append(product.save())
         else:
@@ -82,10 +82,11 @@ class WAChatState:
     _CONFIRM_PAYMENT_DETAILS = "CONFIRM_PAYMENT_DETAILS"
     _CHECK_PAYMENT = "CHECK_PAYMENT"
 
-    _menu_text = "\n\nReply with\n\n *1*: _for_ Chat (chat with AI)\n *2*: _for_ Free Prompt (send custom prompts to AI)" + \
+    _menu_text = "\n\nReply with\n\n *1*: _for_ Chat (Conversation style AI)\n *2*: _for_ Q and A (No conversation memory but uses less tokens)" + \
         "\n *3*: _to_ View And Buy Tokens\n *4*: _to_ View Payments\n *5*: _to_ Get Free Tokens \n\nFor help, whatsapp 263775409679. For more functions: https://zimgpt.pfitz.co.zw/"
     _menu_vars = ['1', '2', '3', '4', '5']
-    _reset_code = "*#exit"
+    _reset_codes = ["*#exit", "*#menu", "#exit", "#menu"]
+    _reset_code = "*#exit or *#menu"
 
     class Data:
         def __init__(self,
@@ -116,15 +117,17 @@ class WAChatState:
         self.timestamp = timestamp
     
     def check_reset_code(input: str) -> bool:
-        if WAChatState._reset_code in input:
+        if input.strip() in WAChatState._reset_codes:
             return True
         else:
             return False
         
     def isTimeStampExpired(self):
+        if self.state == WAChatState._GET_NAME:
+            return False
         return timezone.now() - self.timestamp > timedelta(hours=chat_expiration_time)
 
-    def transition(self, wamid, input):
+    def transition(self, user, wamid, input):
 
         logger.debug("State transition called")
 
@@ -133,10 +136,13 @@ class WAChatState:
             self.state = WAChatState._START
             self.data = None
 
+        # if expiration time has elapsed since last message, reset state
         if self.isTimeStampExpired():
             self.state = WAChatState._START
             self.data = None
-            self.timestamp = timezone.now()
+
+        # reset time everytime there is a message
+        self.timestamp = timezone.now()
 
         match self.state:
 
@@ -152,7 +158,7 @@ class WAChatState:
                         name_line = "Before we begin. What is your name?"
                     messages = [
                         "Welcome to ZimGPT, a service that allows you access to an AI with vast knowledge and the ability to understand and answer questions from any topic you can think of. Boost your creativity and productivity by interacting with the AI in plain english language.",
-                        "You can also access the service online for better readability and copy-paste functionality for your projects and assignments.\n\n The link is https://zimgpt.pfitz.co.zw/ and login with the password in the message below. Keep the password safe as it is not saved in our system.",
+                        "You can also access the service online for better readability and copy-paste functionality for your projects and assignments.\n\nThe link is https://zimgpt.pfitz.co.zw/ and login with the password in the message below. Keep the password safe as it is not saved in our system.",
                         "Password:{pwd}".format(pwd=self.new_password),
                         name_line
                     ]
@@ -165,7 +171,6 @@ class WAChatState:
                     # procees ref code
                     process_ref_code(input)
                 else:
-                    user = get_user_model().objects.get(phone_number=self.user_num)
                     message = "Welcome back to ZimGPT, {name}. Remember you can also access this service online for better readability and copy-paste functionality for your projects and assignments using the link below.\n\n How may I assist you today?".format(name=user.name) + WAChatState._menu_text
                     send_text(self.user_num, message, wamid)
                     # update state
@@ -174,10 +179,9 @@ class WAChatState:
             #### case 2: Requesting for user's name after ground state
             case WAChatState._GET_NAME:
 
-                if input == '0':
+                if str(input) == '0':
                     if len(self.user_name.strip()) > 0:
                         # use whats app profile name
-                        user = get_user_model().objects.get(phone_number=self.user_num)
                         user.name = self.user_name
                         user.save()
                         message = "Thank you, {name}. How may I assist you today?".format(name=self.user_name) + WAChatState._menu_text
@@ -195,7 +199,6 @@ class WAChatState:
                         send_text(self.user_num, message, wamid)
                     else:
                         # good name
-                        user = get_user_model().objects.get(phone_number=self.user_num)
                         user.name = input
                         user.save()
                         message = "Thank you, {name}. How may I assist you today?".format(name=input) + WAChatState._menu_text
@@ -204,45 +207,43 @@ class WAChatState:
 
             #### case 3: Checking menu selection
             case WAChatState._MENU:
-                if input in WAChatState._menu_vars:
-                    match input:
-                        case '1':
+                if str(input) in WAChatState._menu_vars:
+                    match int(input):
+                        case 1:
                             # selected chat
-                            message = "You are in chat mode. Sending {code} will send you back to main menu.\n\n Hi. What's on your mind today?".format(code=WAChatState._reset_code)
+                            message = "You are in chat mode. Sending {code} will send you back to main menu.\n\nHi. What's on your mind today?".format(code=WAChatState._reset_code)
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(conv_history=None)
                             self.state = WAChatState._CHAT
-                        case '2':
+                        case 2:
                             # selected free response
-                            message = "Free prompt mode. Sending {code} will send you back to main menu.\n\n You can enter any text for text-completion by the AI model. ({model})".format(code=WAChatState._reset_code, model=model)
+                            message = "You are in Q and A mode. Sending {code} will send you back to main menu.\n\nGive clear instructions and/or a question for the AI to generate the best response. (AI model: {model})".format(code=WAChatState._reset_code, model=model)
                             send_text(self.user_num, message, wamid)
                             self.data = None
-                            self.state = WAChatState._CHAT
-                        case '3':
+                            self.state = WAChatState._FREE_PROMPT
+                        case 3:
                             # selected view and buy tokens
-                            user = get_user_model().objects.get(phone_number=self.user_num)
                             product_list = [WAChatState.Data.Product(index + 1, product.uuid, product.units_offered, product.price) for index, product in enumerate(Product.objects.filter(active=True).order_by('price'))]
-                            message = "Tokens remaining: *" + user.profile.tokens_remaining + "*\n\n If you want to refill your tokens, select 1 from our product offerings:\n" + \
-                                "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in product_list) + \
-                                "\n Or *0*: To go back to main menu"
+                            message = "Tokens remaining: *" + str(user.profile.tokens_remaining) + "*\n\nIf you want to refill your tokens, select one from our product offerings:\n" + \
+                                "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in product_list) + \
+                                "\nOr *0*: To go back to main menu"
                             send_text(self.user_num, message, wamid)
                             self.data = WAChatState.Data(product_list=product_list)
                             self.state = WAChatState._CHOOSE_PRODUCT
-                        case '4':
+                        case 4:
                             # selected check payment
                             payments = Payment.objects.filter(user__phone_number=self.user_num).order_by('-created')[:5]
                             message = "Here are the last 5 transactions. Select a transaction to check if there is a status update by sending the number.\n" + \
-                                "\n\n".join("*{i}*: {x}{m} via {a}:{n} at {time}. STATUS: {status}".format(i=index+1, x=p.amount, m=currency, a=p.method, n=p.mobile_wallet_number, time=p.created, status=p.status) for index, p in enumerate(payments)) + \
-                                "\n\n To view more transactions go to https://zimgpt.pfitz.co.zw/ or app 263775409679 for help." + \
-                                "\n\n Send *0* to go back to menu."
+                                "\n\n".join("*{i}*: {x}{m} via {a}:{n} at {time}. STATUS: {status}".format(i=str(index+1), x=str(p.amount), m=currency, a=p.method, n=p.mobile_wallet_number, time=p.created, status=p.status) for index, p in enumerate(payments)) + \
+                                "\n\nTo view more transactions go to https://zimgpt.pfitz.co.zw/ or app 263775409679 for help." + \
+                                "\n\nSend *0* to go back to menu."
                             send_text(self.user_num, message, wamid)
                             self.state = WAChatState._CHECK_PAYMENT
-                        case '5':
+                        case 5:
                             # selected get free tokens
-                            user = get_user_model().objects.get(phone_number=self.user_num)
                             messages = [
-                                "*You can get 50,000 tokens which is about 37,500 words!*\n\n For every person you refer you get 50,000 tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp." + \
-                                "\n\n The link is in the message below. Share it and earn more tokens.",
+                                "*You can get {i} tokens which is about {j} words!*\n\nFor every person you refer you get {i} tokens. The person should use the link below to send your ref code, they just follow the link and send the code via whatsapp.".format(i=str(referral_tokens), j=str(referral_tokens*0.75)) + \
+                                "\n\nThe link is in the message below. Share it and earn more tokens.",
                                 "https://wa.me/26777084294?text={code}".format(code=user.profile.ref)
                             ]
                             for message in messages:
@@ -250,78 +251,89 @@ class WAChatState:
                             self.state = WAChatState._START
                 else:
                     # invalid menu selection
-                    message = "Sorry. Unfortunately '{x}' is not a valid menu selection." + WAChatState._menu_text
+                    message = "Sorry. Unfortunately '{x}' is not a valid menu selection.".format(x=input) + WAChatState._menu_text
                     send_text(self.user_num, message, wamid)
                     # state remains the same
 
             #### case 4: Chat
             case WAChatState._CHAT:
-                user = get_user_model().objects.get(phone_number=self.user_num)
                 completion = get_chat_completion(user, input, self.data.conv_history)
                 if completion.isOkay():
                     # no error
                     self.data.conv_history = completion.response.prompt_history
                     send_text(self.user_num, completion.response.generated_text, wamid)
                 else:
-                    message = "Error: Ooops, something went wrong!\n\n _Error message: {msg}_".format(msg=completion.error.message)
+                    message = "Error: Ooops, something went wrong!\n\nError message: {msg}".format(msg=completion.error.message)
                     send_text(self.user_num, message, wamid)
 
             #### case 5: Prompt engineer
             case WAChatState._FREE_PROMPT:
-                user = get_user_model().objects.get(phone_number=self.user_num)
                 completion = get_completion(user, input)
                 if completion.isOkay():
                     # no error
                     send_text(self.user_num, completion.response.generated_text, wamid)
                 else:
-                    message = "Error: Ooops, something went wrong!\n\n _Error message: {msg}_".format(msg=completion.error.message)
+                    message = "Error: Ooops, something went wrong!\n\nError message: {msg}".format(msg=completion.error.message)
                     send_text(self.user_num, message, wamid)
                 pass
 
             #### case 6: Choose and buy tokens
             case WAChatState._CHOOSE_PRODUCT:
-                product_indices = [p.index for p in self.data.product_list]
+                if self.data.product_list is not None:
+                    product_indices = [p.index for p in self.data.product_list]
+                else:
+                    product_indices = [''] 
 
                 # check if any product was selected
-                if int(input) in product_indices:
-                    # pick a product and transition to confirmation state
-                    product = [p for p in self.data.product_list if p.index == int(input)][0]
-                    self.data.product_id = product.product_id
-                    message = "You selected {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(x=product.units, y=product.price, m=currency)
-                    send_text(self.user_num, message, wamid)
-                    self.state = WAChatState._CONFIRM_PRODUCT
-                
-                elif int(input) == 0:
-                    # return to main menu
-                    self.data = None
-                    self.state = WAChatState._MENU
-                    message = "Let start again." + WAChatState._menu_text
-                    send_text(self.user_num, message, wamid)
+                try:
 
-                else:
+                    if int(input) in product_indices:
+                        # pick a product and transition to confirmation state
+                        product = [p for p in self.data.product_list if p.index == int(input)][0]
+                        self.data.product_id = product.product_id
+                        message = "You selected {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(x=str(product.units), y=str(product.price), m=currency)
+                        send_text(self.user_num, message, wamid)
+                        self.state = WAChatState._CONFIRM_PRODUCT
+                    
+                    elif int(input) == 0:
+                        # return to main menu
+                        self.data = None
+                        self.state = WAChatState._MENU
+                        message = "Let start again." + WAChatState._menu_text
+                        send_text(self.user_num, message, wamid)
+
+                    else:
+                        # invalid input
+                        message = "Sorry, '{i}' is not a valid selection. Please choose from:\n" + \
+                            "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                            "\nOr *0*: To go back to main menu"
+                        send_text(self.user_num, message, wamid)
+                        # state remains the same
+
+                except ValueError:
                     # invalid input
-                    message = "Sorry, '{i}' is not a valid selection. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                    message = "Sorry, '{i}' is not a valid selection. Please choose from:\n".format(i=input) + \
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # state remains the same
 
             ### case 7: Receive confirmation or rejection of selected product
             case WAChatState._CONFIRM_PRODUCT:
 
-                if input == '1':
+                if str(input) == '1':
                     # confirmed product selection
                     # ask for payment method
-                    message = "How would you like to pay for your product?\n\n Select:\n\n *1* Ecocash\n *2* Telecash\n *3* OneMoney \n *0* To Cancel Payment."
+                    message = "How would you like to pay for your product?\n\n Select:\n\n*1* Ecocash\n*2* Telecash\n*3* OneMoney \n*0* To Cancel Payment."
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._GET_PAYMENT_METHOD
 
-                elif input == '0':
+                elif str(input) == '0':
                     # cancelled selection
                     # offer selection again
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
 
                     self.state = WAChatState._CHOOSE_PRODUCT
@@ -329,19 +341,19 @@ class WAChatState:
                 else:
                     # invalid input
                     product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
-                    message = "Sorry, '{i}' is not a valid response.\n\n You are about to buy {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(x=product.units, y=product.price, m=currency)
+                    message = "Sorry, '{i}' is not a valid response.\n\nYou are about to buy {x} tokens which cost {y}{m}. Send *1* to confirm or *0* to cancel.".format(i=input, x=str(product.units), y=str(product.price), m=currency)
                     send_text(self.user_num, message, wamid)
                     # state remains the same
 
             ### case 8: Select payment method or rejection of selected product    
             case WAChatState._GET_PAYMENT_METHOD:
                 
-                if input in ['1', '2', '3']:
-                    if input == '1':
+                if str(input) in ['1', '2', '3']:
+                    if str(input) == '1':
                         self.data.payment_method = "ecocash"
-                    elif input == '2':
+                    elif str(input) == '2':
                         self.data.payment_method = "telecash"
-                    elif input == '3':
+                    elif str(input) == '3':
                         self.data.payment_method = "onemoney"
 
                     # ask for mobile wallet number
@@ -349,18 +361,18 @@ class WAChatState:
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._GET_PAYMENT_NUMBER
 
-                elif input == '0':
+                elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # set state for product selection
                     self.state = WAChatState._CHOOSE_PRODUCT
                 
                 else:
                     # invalid input
-                    message = "Sorry, '{i}' is not a valid response.\n\nHow would you like to pay for your product?\n\n Select:\n\n *1* Ecocash\n *2* Telecash\n *3* OneMoney \n *0* To Cancel Payment."
+                    message = "Sorry, '{i}' is not a valid response.\n\nHow would you like to pay for your product?\n\nSelect:\n\n*1* Ecocash\n*2* Telecash\n*3* OneMoney \n*0* To Cancel Payment.".format(i=input)
                     send_text(self.user_num, message, wamid)
                     #state is not changed
 
@@ -372,27 +384,27 @@ class WAChatState:
                     self.data.payment_number = input
 
                     # get product
-                    product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
+                    product = [p for p in self.data.product_list if p.product_id == self.data.product_id][0]
 
                     # ask for confirmation and email for paynow
-                    message = "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=product.units, y=product.price, m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
-                        "\n\n If information is correct, enter and *send your email address* for payment confirmation." + \
-                        "\n\n If incorrect send *0* to cancel payemnt."
+                    message = "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
+                        "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
+                        "\n\nIf incorrect send *0* to cancel payemnt."
                     send_text(self.user_num, message, wamid)
                     self.state = WAChatState._CONFIRM_PAYMENT_DETAILS
                 
-                elif input == '0':
+                elif str(input) == '0':
                     # cancelled
                     message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                     send_text(self.user_num, message, wamid)
                     # set state for product selection
                     self.state = WAChatState._CHOOSE_PRODUCT
                 
                 else:
                     # invalid input
-                    message = "Sorry, '{i}' is not a valid response or mobile number.\n\nExample mobile number format is 0777111222\n\n Or *0* To Cancel Payment."
+                    message = "Sorry, '{i}' is not a valid response or mobile number.\n\nExample mobile number format is 0777111222\n\nOr *0* To Cancel Payment.".format(i=input)
                     send_text(self.user_num, message, wamid)
                     #state is not changed
 
@@ -406,7 +418,7 @@ class WAChatState:
 
                     # valid email, process payment
                     response = initiate_payment(
-                        get_user_model().objects.get(phone_number=self.user_num),
+                        user,
                         Product.objects.get(uuid=self.data.product_id),
                         self.data.payment_method,
                         self.data.payment_number,
@@ -415,7 +427,7 @@ class WAChatState:
 
                     if response[1] == status.HTTP_200_OK:
                         # payment request accepted
-                        message = "Transaction initiated. If you are not automatically prompted to complete payment, follow these instructions:\n\n" + response[0]
+                        message = "Transaction initiated. If you are not automatically prompted to complete payment, follow these instructions:\n\n" + response[0] + "\n\nSend 'Hi' to continue."
                         send_text(self.user_num, message, wamid)
                         self.data = None
                         self.state = WAChatState._START
@@ -425,19 +437,19 @@ class WAChatState:
                         # get product
                         product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
 
-                        message = "Sorry, An error occured. Error: {err}.\n\n".format(response[0]) + \
-                            "You were attempting to purchase *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=product.units, y=product.price, m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
-                            "\n\n If information is correct, enter and *send your email address* for payment confirmation." + \
-                            "\n\n If incorrect send *0* to cancel payemnt."
+                        message = "Sorry, An error occured. Error: {err}.\n\n".format(err=response[0]) + \
+                            "You were attempting to purchase *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
+                            "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
+                            "\n\nIf incorrect send *0* to cancel payemnt."
                         send_text(self.user_num, message, wamid)
 
                 except ValidationError:
                     # not a vaild email
-                    if input == '0':
+                    if str(input) == '0':
                         # cancelled by user
                         message = "You can select the product of choice. Please choose from:\n" + \
-                        "\n ".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=p.index, y=p.units, z=p.price, m=currency) for p in self.data.product_list) + \
-                        "\n Or *0*: To go back to main menu"
+                        "\n".join("*{x}*: Buy {y} tokens for {z}{m}".format(x=str(p.index), y=str(p.units), z=str(p.price), m=currency) for p in self.data.product_list) + \
+                        "\nOr *0*: To go back to main menu"
                         send_text(self.user_num, message, wamid)
                         # set state for product selection
                         self.state = WAChatState._CHOOSE_PRODUCT
@@ -448,18 +460,18 @@ class WAChatState:
                         product = [p for p in self.data.product_list if p.product_id == self.product_id][0]
 
                         # ask for confirmation and email for paynow
-                        message = "Sorry, '{i}' is neither a valid email nor '0' for cancellation.\n\n" + \
-                            "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=product.units, y=product.price, m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
-                            "\n\n If information is correct, enter and *send your email address* for payment confirmation." + \
-                            "\n\n If incorrect send *0* to cancel payemnt."
+                        message = "Sorry, '{i}' is neither a valid email nor '0' for cancellation.\n\n".format(i=input) + \
+                            "You are purchasing *{x} tokens* for *{y}{m}* with *'{a}'* number *{n}*.".format(x=str(product.units), y=str(product.price), m=currency, a=self.data.payment_method, n=self.data.payment_number) + \
+                            "\n\nIf information is correct, enter and *send your email address* for payment confirmation." + \
+                            "\n\nIf incorrect send *0* to cancel payemnt."
                         send_text(self.user_num, message, wamid)
                         # state remains the same
 
 
             ### case 11: Check payment status
             case WAChatState._CHECK_PAYMENT:
-                if input in ['0', '1', '2', '3', '4', '5']:
-                    if input == '0':
+                if str(input) in ['0', '1', '2', '3', '4', '5']:
+                    if str(input) == '0':
                         # return to main menu
                         self.data = None
                         self.state = WAChatState._MENU
@@ -475,12 +487,12 @@ class WAChatState:
                             payment = payments[int(input)-1]
                             check_payment_status(payment)
                             message = "Here is the most current information for the transaction:\n\n" + \
-                                "Date and time of payment: {dt}\n".format(dt=payment.created) + \
-                                "Amount: {x}{m}\n".format(x=payment.amount, m=currency) + "Payment platform: {m}\n".format(m=payment.method) + \
+                                "Date and time of payment: {dt}\n".format(dt=str(payment.created)) + \
+                                "Amount: {x}{m}\n".format(x=str(payment.amount), m=currency) + "Payment platform: {m}\n".format(m=payment.method) + \
                                 "Mobile wallet number: {n}\n".format(n=payment.mobile_wallet_number) + \
                                 "Reference: {ref}\n".format(ref=payment.uuid) + "Status: {s}\n".format(s=payment.status) + \
-                                "Last updated at: {dt}\n".format(dt=payment.updated) + \
-                                "\n\n App 263775409679 for any queries. \n\n Select another transaction or *0* to go back to main menu"
+                                "Last updated at: {dt}\n".format(dt=str(payment.updated)) + \
+                                "\n\nApp 263775409679 for any queries. \n\nSelect another transaction or *0* to go back to main menu"
                             send_text(self.user_num, message, wamid)
                             # keep state
 

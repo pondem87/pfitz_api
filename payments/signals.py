@@ -2,6 +2,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from .models import Payment
 from zimgpt.models import TokenReload
+from django.utils import timezone
 import datetime
 import logging
 
@@ -28,8 +29,9 @@ def payment_post_save_handler(sender, instance: Payment, created, *args, **kwarg
                 #get profile and add tokens from product
                 profile = reload.profile
                 profile.tokens_remaining += reload.product.units_offered
+                profile.notified_low_bal = 0
                 profile.save()
                 reload.loaded = True
-                reload.load_timestamp = datetime.datetime.utcnow()
+                reload.load_timestamp = timezone.now()
                 reload.save()
                 logger.info("Tokens loaded: user: %s; tokens: %s;", profile.user.phone_number, reload.product.units_offered)

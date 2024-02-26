@@ -303,22 +303,22 @@ class WebhookStatusSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Status(**validated_data, conversation=conversation, errors=errors, pricing=pricing)
 
 class WebhookVideoSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    caption = serializers.CharField()
-    filename = serializers.CharField()
-    sha256 = serializers.CharField()
-    mime_type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    caption = serializers.CharField(required=False)
+    filename = serializers.CharField(required=False)
+    sha256 = serializers.CharField(required=False)
+    mime_type = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Video(**validated_data)
 
 class WebhookSystemSerializer(serializers.Serializer):
-    body = serializers.CharField()
-    identity = serializers.CharField()
-    new_wa_id = serializers.CharField()
-    wa_id = serializers.CharField()
-    type = serializers.CharField()
-    customer = serializers.CharField()
+    body = serializers.CharField(required=False)
+    identity = serializers.CharField(required=False)
+    new_wa_id = serializers.CharField(required=False)
+    wa_id = serializers.CharField(required=False)
+    type = serializers.CharField(required=False)
+    customer = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.System(**validated_data)
@@ -416,10 +416,10 @@ class WebhookInteractiveSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Interactive(type=type)
 
 class WebhookImageSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    caption = serializers.CharField()
-    sha256 = serializers.CharField()
-    mime_type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    caption = serializers.CharField(required=False)
+    sha256 = serializers.CharField(required=False)
+    mime_type = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Image(**validated_data)
@@ -433,11 +433,11 @@ class WebhookIdentitySerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Identity(**validated_data)
 
 class WebhookDocumentSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    caption = serializers.CharField()
-    filename = serializers.CharField()
-    sha256 = serializers.CharField()
-    mime_type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    caption = serializers.CharField(required=False)
+    filename = serializers.CharField(required=False)
+    sha256 = serializers.CharField(required=False)
+    mime_type = serializers.CharField(required=False)
 
     def create(self, validated_data):
         return Webhook.Entry.Change.Value.Message.Document(**validated_data)
@@ -451,10 +451,10 @@ class WebhookReferredProductSerializer(serializers.Serializer):
         return Webhook.Entry.Change.Value.Message.Context.ReferredProduct(**validated_data)
 
 class WebhookContextSerializer(serializers.Serializer):
-    forwarded = serializers.BooleanField()
-    frequently_forwarded = serializers.BooleanField()
-    vars()["from"] = serializers.CharField()
-    id = serializers.CharField()
+    forwarded = serializers.BooleanField(required=False)
+    frequently_forwarded = serializers.BooleanField(required=False)
+    vars()["from"] = serializers.CharField(required=False)
+    id = serializers.CharField(required=False)
     referred_product = WebhookReferredProductSerializer(required=False)
 
     def create(self, validated_data):
@@ -800,7 +800,7 @@ class ParameterSerializer(serializers.Serializer):
 class ComponentSerializer(serializers.Serializer):
     type = serializers.CharField()
     sub_type = serializers.CharField(required=False)
-    parameters = ParameterSerializer(many=True)
+    parameters = ParameterSerializer(many=True, required=False)
     index = serializers.CharField(required=False)
 
 class TemplateSerializer(serializers.Serializer):

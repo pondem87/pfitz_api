@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'knox',
+    'boto3',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,12 +46,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
 
     #custom
     'whatsapp',
     'user_accounts',
     'zimgpt',
     'payments',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -91,15 +94,21 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": config("CHANNEL_LAYERS_BACKEND"),
         "CONFIG": {
-            "hosts": [(config("CHANNEL_LAYERS_HOST"), config("CHANNEL_LAYERS_PORT"))]
+            "host": config("CHANNEL_LAYERS_HOST")
         }
     }
 }
 
+CELERY_BROKER_URL = config("CELERY_BROKER_HOST")
+
+CELERY_BEAT_SCHEDULE_EXPIRES = config("CELERY_BEAT_SCHEDULE_EXPIRES", cast=int, default=43200)
+
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = config('ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
-#CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+
+CSRF_TRUSTED_ORIGINS = config('ALLOWED_ORIGINS', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Database
@@ -141,7 +150,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Harare'
 
 USE_I18N = True
 
@@ -151,9 +160,31 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = config("STATIC_URL")
 
-STATIC_ROOT = config("STATIC_ROOT_DIR")
+# STATIC_ROOT = config("STATIC_ROOT_DIR")
+
+# from .cdn_config import (
+#     STORAGES,
+#     AWS_S3_ACCESS_KEY_ID,
+#     AWS_S3_SECRET_ACCESS_KEY,
+#     AWS_STORAGE_BUCKET_NAME,
+#     AWS_S3_REGION_NAME,
+#     AWS_LOCATION,
+#     # cloudfront url
+#     AWS_S3_CUSTOM_DOMAIN,
+# )
+
+from .cdn_config import (
+    STATICFILES_STORAGE,
+    DEFAULT_FILE_STORAGE,
+    AWS_S3_ACCESS_KEY_ID,
+    AWS_S3_SECRET_ACCESS_KEY,
+    AWS_STORAGE_BUCKET_NAME,
+    AWS_S3_ENDPOINT_URL,
+    AWS_S3_OBJECT_PARAMETERS,
+    AWS_S3_REGION_NAME
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
@@ -179,6 +210,7 @@ REST_KNOX = {
   'TOKEN_LIMIT_PER_USER': None,
   'AUTO_REFRESH': False,
 }
+
 
 # setup logging
 loggly_token = config("LOGGLY_TOKEN")
@@ -224,7 +256,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'loggly', 'file'],
             'level': 'INFO',
         },
         'zimgpt': {
@@ -244,6 +276,10 @@ LOGGING = {
             'level': log_level,
         },
         'pfitz_api': {
+            'handlers': ['console', 'loggly', 'file'],
+            'level': log_level,
+        },
+        'dashboard': {
             'handlers': ['console', 'loggly', 'file'],
             'level': log_level,
         }

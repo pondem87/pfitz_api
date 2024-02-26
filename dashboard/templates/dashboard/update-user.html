@@ -1,0 +1,32 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="row py-3">
+    <div class="col-lg-8 offset-lg-2">
+        <h1>ZimGPT User Update Panel</h1>
+        <h3>Updating user: {{phone_number}}</h3>
+        <p class="lead">Name: {{name}}; UUID reference: {{ref}}</p>
+        <p>Joined on {{date_joined}} and last used service on {{last_engagement}}</p>
+    </div>
+</div>
+<div class="row py-4">
+    <div class="col-lg-6 offset-lg-3">
+        <form method="post">
+            {% csrf_token %}
+            <h3>User Update Fields</h3>
+            {{form.as_p}}
+            <h3>Profile Update Fields</h3>
+            {{profile.as_p}}
+            <input type="hidden" value="{{next}}" name="next" />
+            <button type="submit" value="Save" class="btn btn-primary m-3">Update</button>
+            <a href="{{next}}"><button value="Cancel" class="btn btn-danger m-3">Cancel</button></a>
+        </form>
+    </div>
+</div>
+<div class="row py-4">
+    <div class="col-lg-8 offset-lg-2">
+        <h4>WhatsApp Chate State Variables</h4>
+        <p><code>{{wa_chat_state}}</code></p>
+    </div>
+</div>
+{% endblock content %}

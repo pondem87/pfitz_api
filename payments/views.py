@@ -3,11 +3,12 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .serializers import ProductSerializer, PaymentSerializer, InitiatePaymentSerializer
 from .models import Product, Payment
-from .paynow import paynow
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from user_accounts.permissions import IsVerifiedUser
 from rest_framework.settings import api_settings
 from .pay_func import initiate_payment, check_payment_status
+from paynow import Paynow
+from decouple import config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,44 +23,22 @@ class UpdatePaymentAPIView(generics.GenericAPIView):
 
         if request.data.get("pollurl", None):
 
+            paynow = Paynow(
+                config("PAYNOW_INTEGRATION_ID"),
+                config("PAYNOW_INTEGRATION_KEY"),
+                config("PAYNOW_RETURN_URL"),
+                config("PAYNOW_RESULT_URL")
+            )
+
             response = paynow.check_transaction_status(request.data.get("pollurl"))
 
             payment: Payment = get_object_or_404(Payment, uuid=response.reference)
             
 
-            if response.paid:
-                
-                payment.status = Payment.STATUS_PAID
-
-            elif response.status.lower().strip() == "created":
-
-                payment.status = Payment.STATUS_INITIATED
-
-            elif response.status.lower().strip() == "sent":
-
-                payment.status = Payment.STATUS_PENDING
-
-            elif response.status.lower().strip() == "cancelled":
-
-                payment.status = Payment.STATUS_CANCELLED
-
-            elif response.status.lower().strip() == "refunded":
-
-                payment.status = Payment.STATUS_REFUNDED
-            
-            elif response.status.lower().strip() == "delivered" or response.status.lower().strip() == "awaiting delivery":
-                
-                payment.status = Payment.STATUS_APPROVED
-            
-            else:
-
-                payment.status = Payment.STATUS_PENDING
-
-            payment.external_ref = response.paynow_reference
-            payment.save()
+            # check payment
+            check_payment_status(payment)
 
             return Response(None, status=status.HTTP_200_OK)
-
             
         else:
             logger.error("Payment update from API failed.")

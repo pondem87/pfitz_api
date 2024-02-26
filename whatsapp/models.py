@@ -41,7 +41,7 @@ class Message():
         self.context = context
 
     class Template:
-        def __init__(self, name, language, components):
+        def __init__(self, name, language, components=None):
             self.name = name
             self.language = language
             self.components = components
@@ -152,7 +152,7 @@ class Webhook:
                                  order=None, referral=None, sticker=None, system=None, text=None,
                                  timestamp=None, video=None):
                         self.id = id
-                        self.wa_from = wa_from
+                        setattr(self, "from", wa_from)
                         self.type = type
                         self.audio = audio
                         self.button = button
@@ -181,20 +181,20 @@ class Webhook:
                             self.text = text
                     
                     class Context:
-                        def __init__(self, forwarded, frequently_forwarded, wa_from, id, referred_product):
+                        def __init__(self, forwarded=None, frequently_forwarded=None, wa_from=None, id=None, referred_product=None):
                             self.forwarded = forwarded
                             self.frequently_forwarded = frequently_forwarded
-                            self.wa_from = wa_from
+                            setattr(self, "from", wa_from)
                             self.id = id
                             self.referred_product = referred_product
 
                         class ReferredProduct:
-                            def __init__(self, catalog_id, product_retailer_id) -> None:
+                            def __init__(self, catalog_id=None, product_retailer_id=None) -> None:
                                 self.catalog_id = catalog_id
                                 self.product_retailer_id = product_retailer_id
 
                     class Document:
-                        def __init__(self, id, caption, filename, sha256, mime_type):
+                        def __init__(self, id=None, caption=None, filename=None, sha256=None, mime_type=None):
                             self.id = id
                             self.caption = caption
                             self.filename = filename
@@ -208,7 +208,7 @@ class Webhook:
                             self.hash = hash
 
                     class Image:
-                        def __init__(self, id, caption, sha256, mime_type):
+                        def __init__(self, id=None, caption=None, sha256=None, mime_type=None):
                             self.id = id
                             self.caption = caption
                             self.sha256 = sha256
@@ -267,7 +267,7 @@ class Webhook:
                             self.animated = animated
 
                     class System:
-                        def __init__(self, body, identity,  wa_id, type, customer, new_wa_id=None):
+                        def __init__(self, body=None, identity=None,  wa_id=None, type=None, customer=None, new_wa_id=None):
                             self.body = body
                             self.identity = identity
                             self.new_wa_id = new_wa_id
@@ -280,7 +280,7 @@ class Webhook:
                             self.body = body
 
                     class Video:
-                        def __init__(self, id, filename, sha256, caption, mime_type):
+                        def __init__(self, id=None, filename=None, sha256=None, caption=None, mime_type=None):
                             self.id = id
                             self.filename = filename
                             self.sha256 = sha256

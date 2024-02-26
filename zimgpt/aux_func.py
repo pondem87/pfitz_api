@@ -5,6 +5,7 @@ import logging
 from .models import ClientCompletionResponse, APIRequest, Profile
 from .serializers import UpstreamChatCompletionResponseSerializer
 from .util import subtract_used_tokens, num_tokens_from_string, base_chat_prompt
+import uuid
 import json
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,10 @@ model_max_tokens = config('OPENAI_COMPLETION_MODEL_MAX_TOKENS', cast=int)
 model_encoder = config('OPENAI_COMPLETION_MODEL_ENCODER')
 chat_completion_temp = config('OPENAI_CHAT_COMPLETION_TEMP', default=0.5, cast=float)
 
-ref_reward_tokens = config('REFERRAL_REWARD_TOKENS')
+ref_reward_tokens = config('REFERRAL_REWARD_TOKENS', cast=int)
+
+whats_app_menu_cmd = "*#exit or *#menu"
+go_to_menu_how = "\n\nTo go to main menu send {0}".format(whats_app_menu_cmd)
 
 # FUNCTIONS
 
@@ -46,10 +50,11 @@ def get_chat_completion(user, prompt_text, messages=None):
 
     if (profile.tokens_remaining < required_tokens):
         error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION,
-                                               "You are low on tokens. You need at least {0} tokens".format(required_tokens))
+                                               "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.{1}".format(required_tokens, go_to_menu_how))
         return ClientCompletionResponse(None, error)
 
-    completion_max_tokens = model_max_tokens - (prompt_tokens + 100)
+    completion_max_tokens = model_max_tokens - (prompt_tokens + 80)
+
     logger.debug("get_chat_completion: calling API")
 
     try:
@@ -117,7 +122,7 @@ def get_completion(user, prompt_text):
     required_tokens = model_max_tokens
 
     if (profile.tokens_remaining < required_tokens):
-        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens".format(required_tokens))
+        error = ClientCompletionResponse.Error(ClientCompletionResponse.ERROR_ACCESS_VALIDATION, "You are low on tokens. You need at least {0} tokens. You can buy more tokens from main menu.{1}".format(required_tokens, go_to_menu_how))
         return ClientCompletionResponse(None, error)
 
     completion_max_tokens = model_max_tokens - (num_tokens_from_string(str(prompt)) + 100)
@@ -139,8 +144,7 @@ def get_completion(user, prompt_text):
             obj = serializer.save()
 
             # subtract used tokens
-            tokens_remaining = subtract_used_tokens(
-                profile, obj.usage.total_tokens)
+            tokens_remaining = subtract_used_tokens(profile, obj.usage.total_tokens)
 
             # save api request
             APIRequest.objects.create(
@@ -176,10 +180,29 @@ def get_completion(user, prompt_text):
 
 
 def process_ref_code(ref):
+
+    logger.debug("Processing ref code: %s", str(ref))
+
+    ref_uuid = is_valid_uuid(ref)
+
+    if not ref_uuid:
+        logger.debug("Processing ref code: %s not valid ref code", str(ref))
+        return
     
     try:
-        profile = Profile.objects.get(ref=ref)
-        profile.tokens_remaining += ref_reward_tokens
-        profile.save()
+        prof = Profile.objects.get(ref=ref_uuid)
+        logger.debug("Adding tokens: Profile=%s, Tokens=%s", str(prof), ref_uuid)
+        prof.tokens_remaining = int(prof.tokens_remaining) + ref_reward_tokens
+        logger.debug("Saving profile: Profile=%s, Tokens=%s", str(prof), str(prof.tokens_remaining))
+        prof.save()
     except Profile.DoesNotExist:
-        logger.info("Referral code failed: Code=%s", ref)
+        logger.info("Referral code failed: Code=%s", ref_uuid)
+
+
+def is_valid_uuid(uuid_str):
+    try:
+        uuid_obj = uuid.UUID(uuid_str)
+    except ValueError:
+        return False
+    
+    return str(uuid_obj)

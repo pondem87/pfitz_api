@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from payments.models import Payment, Product
+from django.utils import timezone
 import uuid
 
 # Create your models here.
@@ -10,7 +11,11 @@ class Profile(models.Model):
     chat_max_tokens = models.IntegerField(default=4000)
     wa_chat_state = models.JSONField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
-    ref = models.UUIDField(default=uuid.uuid4, editable=False)
+    ref = models.UUIDField(default=uuid.uuid4)
+    notified_low_bal = models.IntegerField(default=0)
+    low_bal_last_notified = models.DateTimeField(default=timezone.now)
+    last_engagement= models.DateTimeField(default=timezone.now)
+    stop_promotions = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.phone_number
@@ -41,6 +46,16 @@ class TokenReload(models.Model):
     load_timestamp = models.DateTimeField(default=None, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+
+class DailyMetrics(models.Model):
+    date = models.DateField(unique=True)
+    daily_active_users = models.IntegerField()
+    daily_new_users = models.IntegerField()
+    daily_token_purchases = models.IntegerField()
+    daily_token_purchase_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    daily_api_requests = models.IntegerField()
+    daily_token_usage = models.IntegerField()
+    total_users = models.IntegerField()
 
 # Other objects
 class ClientCompletionResponse:
