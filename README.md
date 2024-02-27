@@ -29,6 +29,8 @@ Whats app is used as a second interface for the client. The whatsapp app impleme
 ### Celery beat scheduler
 Due to limitations of the "Paynow" service for mobile money wallet services in Zimbabwe we had to comme up with a schedule to check for payment status updates. After making a payment, the Paynow server is supposed to post status updates to our return URL, however, this did not happen as specified in Paynow's documentation. This meant our server had to poll Paynow server for status updates. We wanted our payment url request to return a response to the client as soon as the upstream request was sent and not continue polling for any amount of time before returning a response to our client. This meant that somehow at some arbitrary point in the future our server would need to follow up on all pending payments and update their statuses. Our solution was to create an entry in the task scheduler for each payment, which would make make requests to paynow server at regular intervals up to a specified period and then the task is deleted from the database. Firstly the task would expire, and then a regular clean up task would delete all expired tasks at specified intervals. This means the user will be automatially alerted via whatsapp when a payment status changes and service would automatically resume.
 
+The beat scheduler was customised to add a lock implemented using rabbitmq locked queue. This was done to avoid duplication of tasks in a setup where multiple servers where running celery-beat while sharing a single database. It was necessary to ensure that only one server can run the tick method. Each server tried to declare an exclusive queue and only proceeds with the tick if sucessful.
+
 ## Django apps
 
 ### Dashboard
